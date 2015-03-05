@@ -26,6 +26,7 @@
 		A6D193E21AA8637100C507AC /* imgSeg */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = imgSeg; sourceTree = BUILT_PRODUCTS_DIR; };
 		A6D193E51AA8637100C507AC /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		A6D193EA1AA8663300C507AC /* util.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = util.h; sourceTree = "<group>"; };
+		A6D193EF1AA88AB100C507AC /* define.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = define.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,6 +61,7 @@
 			children = (
 				A6D193E51AA8637100C507AC /* main.c */,
 				A6D193EA1AA8663300C507AC /* util.h */,
+				A6D193EF1AA88AB100C507AC /* define.h */,
 			);
 			path = imgSeg;
 			sourceTree = "<group>";

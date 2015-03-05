@@ -1,0 +1,1 @@
+ssh -X tntr@hpc-fe.gbar.dtu.dk

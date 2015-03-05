@@ -12,26 +12,9 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
+#include "define.h"
 
 
-void init_state(int *state, int row, int col){
-    // Dead boundary
-    // And random inside
-    time_t t;
-    srand(time(&t));
-    for(int i = 0; i < row; i++){
-        for(int j = 0; j < col; j++){
-            if(i == 0 || i == row - 1
-               || j == 0 || j == col - 1){
-                state[i*col + j] = 0;
-            }
-            else{
-                
-                state[i*col + j] = (rand() > RAND_MAX/2.0)? 0:1;
-            }
-        }
-    }
-};
 
 void write_to_file(int *mat, int nrow, int ncol, char *file_name){
     FILE *f = fopen(file_name, "w");
@@ -47,6 +30,28 @@ void write_to_file(int *mat, int nrow, int ncol, char *file_name){
     }
     
     fclose(f);
+}
+
+unsigned int * read_my_image(const char * file_name, int * n_row, int * n_col){
+    FILE *f = fopen(file_name, "r");
+    if (f) {
+        
+        fscanf(f, "%d %d\n", n_row, n_col);
+        assert(*n_row > 0 && *n_col > 0, "image file error");
+        unsigned int* img = malloc( (*n_row) * (*n_col) * sizeof(unsigned int));
+        
+        for (int i = 0; i < *n_row; i++) {
+            for (int j = 0; j < *n_col; j++) {
+                fscanf(f, "%d", img + i* (*n_col) + j);
+            }
+            fscanf(f, "\n");
+        }
+        
+        fclose(f);
+        return img;
+    }
+    
+    return NULL;
 }
 
 

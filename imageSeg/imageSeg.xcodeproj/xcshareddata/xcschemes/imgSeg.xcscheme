@@ -44,8 +44,8 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/tuannt8/Documents/Github/large-scale-model/large-scale-model/imageSeg/LOG"
-      buildConfiguration = "Debug"
+      customWorkingDirectory = "/Users/tuannt8/Documents/Github/large-scale-model/imageSeg/LOG"
+      buildConfiguration = "Release"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       allowLocationSimulation = "YES">
