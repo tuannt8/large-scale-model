@@ -34,3 +34,7 @@
 
 doc/temp
 imageSeg/LOG
+imageSeg/Build
+imageSeg/DerivedData
+imageSeg/imageSeg.xcodeproj/xcuserdata
+
