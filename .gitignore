@@ -31,3 +31,6 @@
 #Hidden file
 .*
 *~
+
+doc/temp
+imageSeg/LOG

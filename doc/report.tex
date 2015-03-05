@@ -1,0 +1,139 @@
+\documentclass[a4paper]{report}
+%% Packages %%
+\usepackage{hyperref}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{listings} 
+\usepackage{morefloats}
+\usepackage{mathtools}
+\usepackage{gensymb}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{url}
+\usepackage{adjustbox}
+
+\mathtoolsset{showonlyrefs=true} %% Equations numbers are only shown if they are referred to.
+
+\usepackage[ruled,linesnumbered,resetcount,algochapter]{algorithm2e} %% For producing nice pseudo code algorithms
+
+\usepackage[parfill]{parskip} % line break between graph and no indent
+\setlength{\parindent}{1em} % New paragraph indentation
+
+\graphicspath{{../images/}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%													%
+%			User input								%
+%			Remeber to fill out all the inputs!		%
+%													%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\Title}{Image Segmentation with OpenMPI}
+\newcommand{\Author}{Tuan Nguyen Trung}
+\newcommand{\Department}{DTU Compute}
+\newcommand{\Date}{\today}
+\newcommand{\Nameone}{Tuan Nguyen Trung}
+\newcommand{\Mailone}{tntr@dtu.dk}
+
+
+\definecolor{cppcomment}{rgb}{0.133,0.545,0.133}
+\definecolor{cppnumbers}{rgb}{0.5,0.5,0.5}
+
+\lstset{
+  backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}
+  basicstyle=\footnotesize,        % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  commentstyle=\color{cppcomment}, % comment style
+  escapeinside={*@}{@*},           % if you want to add LaTeX within your code
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+  frame=single,                    % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly need columns=flexible)
+  keywordstyle=\color{blue},       % keyword style
+  numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=5pt,                   % how far the line-numbers are from the code
+  numberstyle=\tiny\color{cppnumbers},
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+  showtabs=false,                  % show tabs within strings adding particular underscores
+  stepnumber=1,                    % the step between two line-numbers. If it's 1, each line will be numbered
+  stringstyle=\color{blue},        % string literal style
+  tabsize=2                      % sets default tabsize to 2 spaces
+}
+\hypersetup{
+    bookmarks=true,         % show bookmarks bar?
+    unicode=false,          % non-Latin characters in Acrobat’s bookmarks
+    pdfborder={0 0 0 [3 3]},% removes border around links.
+    pdffitwindow=false,     % window fit to page when opened
+    pdfstartview={FitB},    % fits the width of the page to the window
+    pdftitle={\Title},       % title
+    pdfauthor={\Author},     % author
+    pdfnewwindow=true,      % links in new window
+    colorlinks=false,       % false: boxed links; true: colored links
+    linkcolor=red,          % color of internal links
+    citecolor=green,        % color of links to bibliography
+    filecolor=magenta,      % color of file links
+    urlcolor=cyan           % color of external links
+}
+
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}} % new command
+\titleformat{\chapter}[hang]{\normalfont\huge\bfseries}{\thechapter}{1em}{}
+
+\begin{document}
+\begin{titlepage}
+ 	\begin{center}
+		% Upper part of the page
+		%\includegraphics[scale=1]{dtulogo}\\[2.5cm]
+		%\vspace*{\fill}
+		\noindent \textsc{\Large \Department }\\[0.2cm]
+ 		% Title
+		\HRule \\[0.4cm]
+		{ \huge \bfseries \Title}\\[0.4cm]
+ 		\HRule \\[1 cm]
+ 		% Author and supervisor
+		\begin{minipage}{0.6\textwidth}
+			\large
+		%	\emph{Author:}	\\
+		%	\newline\newline 
+			\Nameone, \Mailone
+			\newline \newline \newline
+
+			 
+		%	\rule{140pt}{0.5pt}\\
+		%	\newline
+		\end{minipage}		
+		\vfill
+ 	\end{center}
+	\begin{center}
+		{\large \Date}
+	\end{center}
+\end{titlepage}
+
+\newpage
+\input{summary.tex}
+\newpage
+\tableofcontents
+\newpage
+\listoffigures
+\newpage
+%%%%%%%%%%%%%%%%%%%% Start text inputs
+
+\input{chan-vese-intro.tex}
+\input{implementation.tex}
+\input{tunning.tex}
+\input{conclusion.tex}
+
+
+%%%%%%%%%%%%%%%%%%% Citation
+\bibliographystyle{plain}
+\bibliography{../citation}
+
+%%%%%%%%%%%%%%%%%%% Start appendix
+\newpage
+\appendix
+\input{appendix.tex}
+
+%%%%%%%%%%%%%%%%%%% End
+\end{document}
