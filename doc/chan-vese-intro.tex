@@ -4,8 +4,139 @@ Chan and Vese \cite{Chan2001}.
 
 Sample code \cite{Getreuer2012}.
 
+Purpose: Solve the minimization Mumford-Shah for image segmentation
+
+
 \subsubsection{Discretization}
 
-Gray scale image: $\mathbf{I}$, size $m \times n$. Pixel value: $[0..255]$
+Gray scale image: $\mathbf{I}$, size $m \times n$. Pixel value: $[0..1]$
 
-level set function: $\Phi$ on domain of the image.
+level set function: $\Phi$ on domain of the image. Level set function is discretized to same size of the image.
+
+Final Chan-Vese model for level set function of minimal Mumford-Shah
+
+\begin{equation}
+    \left\{ 
+        \begin{aligned}
+        & \frac{\partial \phi}{\partial t} = 
+                \delta_{\epsilon} \left[
+                \mu \text{ div} \left( \frac{\nabla \phi}{|\nabla \phi|} \right) - 
+                \nu - 
+                \lambda_1 (f-c_1)^2 +
+                \lambda_2 (f-c_2)^2
+                \right] \quad \text{ in } \Omega\\
+        & \frac{\delta_{\epsilon}(\phi)}{|\nabla \phi|} 
+            \frac{\partial \phi}{\partial \overrightarrow{n}}
+            = 0
+            \qquad \text{ on } \partial \Omega
+        \end{aligned}
+    \right.
+\end{equation}
+
+\begin{equation}
+    \begin{aligned}
+        & 	\Omega \text{ is the image domain } \\
+        & 	f \text{ is the image} \\
+        &	c_1 \text{ and } c_2 \text{ is the mean intensity of the region inside and outside} \\
+        & 	\overrightarrow{n} 
+            \text{ is outward normal of the image boundary} \\
+        & 	\phi 
+            \text{ is the level set function} \\
+        & 	\delta_{\epsilon}(\phi) = \frac{\epsilon}{\pi (\epsilon^2 + \phi^2)} 
+            \text{ is Dirac function. Derivative of heaviside funstion} H_{\epsilon}(t) \\
+        & \nu,\ \eta,\ \lambda_1 \text{ and } \lambda_2 \text{ are constant}
+    \end{aligned}
+\end{equation}
+
+\textbf{Numerical implementation}
+
+\begin{equation}
+    \begin{aligned}
+            \frac{\partial \phi_{i, j}}{\partial t} = 
+            \delta_{\epsilon}(\phi_{i,j}) \left[ \right.
+                    & \left( A_{i,j}(\phi_{i+1, j} - \phi_{i,j})
+                            - A_{i-1,j}(\phi_{i, j} - \phi_{i,j-1}) \right) \\
+                    & + \left( B_{i, j}(\phi_{i, j+1} - \phi_{i, j}) - 
+                             B_{i, j-1}(\phi_{i, j} - \phi_{i, j-1}) \right) \\
+                    & - \nu - 
+                        \lambda_1(f_{i,j} - c_1)^2 +
+                        \lambda_2(f_{i, j} - c_2)^2 
+                        \left. \right]
+    \end{aligned}
+\end{equation}
+
+$A$ and $B$ are matrix same size with $\phi$.
+
+\begin{equation}
+    A_{i, j} = \frac{\mu}
+                {\sqrt{\eta^2 
+                       + (\nabla_x^+ \phi_{i, j} )^2
+                       + (\nabla_y^0 \phi_{i, j} )^2 }
+                }
+\end{equation}
+
+\begin{equation}
+    B_{i, j} = \frac{\nu}
+                    {\sqrt{\eta^2 
+                            + (\nabla_x^0 \phi_{i, j} )^2
+                            + (\nabla_y^+ \phi_{i, j} )^2 } 
+                    }
+\end{equation}
+
+Forward, backward and central difference
+
+\begin{equation}
+    \begin{aligned}
+        \nabla_x^- \phi(i, j) &= \phi_{i, j} - \phi_{i-1, j} \\
+        \nabla_x^+ \phi(i, j) &= \phi_{i+1, j} - \phi_{i, j} \\
+        \nabla_x^0 \phi(i, j) &= (\phi_{i+1, j} - \phi_{i-1, j} ) / 2
+    \end{aligned}
+\end{equation}
+
+\begin{algorithm}[!htb]
+    \DontPrintSemicolon
+    \KwData{Image $I$}
+    Initialize $\phi$ \;
+    \For{ n = 1, .. }{
+        Compute $c_1$ and $c_2$ \;
+        \Begin(Compute $\phi^{n+1}$){
+            Compute $A$ and $B$ \;
+            Compute $\frac{\partial \phi}{\partial t}$ \;
+            Compute $\phi^{n+1} = \phi^n + \frac{\partial \phi}{\partial t} \Delta t$
+        }
+        
+        \textbf{if} $|\phi^{n+1} - \phi^n| < thres$ \textbf{then break} 
+    }
+
+    \caption{Numerical implementation}
+    \label{alg:chan-vese}
+\end{algorithm}
+
+Dependency: Require neighbour pixel.
+
+For parallel computation with MPI.
+\begin{algorithm}[!htb]
+    \DontPrintSemicolon
+    \KwData{Partial image $I_i$}
+    Initialize partial level set function $\phi_i$ \;
+    \For{ n = 1, .. }{
+        Compute $c_1$ and $c_2$ locally\;
+        MPI: Collective sum of $c_1$ and $c_2$ \;\;
+        
+        \Begin(Compute $\phi_i^{n+1}$ locally){
+            Compute $A_i$ and $B_i$ \;
+            Compute $\frac{\partial \phi_i}{\partial t}$ \;
+            Compute $\phi_i^{n+1} = \phi_i^n + \frac{\partial \phi_i}{\partial t} \Delta t$
+        }\;
+        
+        Compute error $|\phi_i^{n+1} - \phi_i^n|$ locally \;
+        MPI: Collective total error $e$ \;
+        \textbf{if} $e < thres$ \textbf{then stop}  \; \;
+        
+        MPI: Exchange boundaries \;
+        
+    }
+    
+    \caption{OpenMPI algorithm}
+    \label{alg:chan-vese-mpi}
+\end{algorithm}

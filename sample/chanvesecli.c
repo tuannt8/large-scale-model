@@ -98,8 +98,8 @@ static void PrintHelpMessage()
 
 
 static int PlotFun(int State, int Iter, num Delta,
-    const num *c1, const num *c2, const num *Phi,
-    int Width, int Height, int NumChannels, void *ParamPtr);
+                   const num *c1, const num *c2, const num *Phi,
+                   int Width, int Height, int NumChannels, void *ParamPtr);
 static int ParseParam(programparams *Param, int argc, const char *argv[]);
 static int PhiRescale(image *Phi);
 

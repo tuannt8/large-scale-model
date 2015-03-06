@@ -38,6 +38,9 @@ imageSeg/Build/
 imageSeg/DerivedData/
 imageSeg/imageSeg.xcodeproj/xcuserdata
 
+
 sample/Build/
+sample/Data
 sample/DerivedData/
 sample/sample.xcodeproj/xcuserdata
+sample/sample.xcodeproj/project.xcworkspace/xcuserdata/

@@ -1,41 +1,31 @@
+//
+//  main.c
+//  imageSeg
+//
+//  Created by Tuan Nguyen Trung on 3/5/15.
+//
+//
 
+#include <mpi.h>
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include "util.h"
 #include <stdbool.h>
 
-#define MAIN_PROC 0
-
-// Image information
-int n_row, n_col;
-unsigned int * image = NULL; // 0-255
-
-// Level set function
-// Consider level set size same as image size
-double *Phi0, *Phi;
-
+// Process information
+const int main_proc = 0;
+int rank, size;
 
 int main(int argc, char* argv[]){
     
-    // 1. Read input image
+    MPI_Init(&argc, &argv);
     
-    image = read_my_image("../Data/square.my" , &n_row, &n_col);
-    if (!image) {
-        printf("Read image failed\n");
-        return 1;
-    }
+    MPI_Comm_rank (MPI_COMM_WORLD, &rank);
+    MPI_Comm_size (MPI_COMM_WORLD, &size);
     
-    // 2. Initialize level set functions
-    Phi0 = malloc(n_row * n_col * sizeof(double));
-    Phi = malloc(n_row * n_col * sizeof(double));
+    print_info(); // Some information for debugging
     
-    
-    
-    // Free memory
-    free(image);
-    free(Phi);
-    free(Phi0);
-    
+    MPI_Finalize();
     return 0;
 }

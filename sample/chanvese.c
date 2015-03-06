@@ -134,7 +134,7 @@ int ChanVese(num *Phi, const num *f,
     const num *fPtr, *fPtr2;
     double PhiDiffNorm, PhiDiff;
     num *PhiPtr, *c1 = 0, *c2 = 0;
-    num c1Scalar, c2Scalar, Mu, Nu, Lambda1, Lambda2, dt;
+    num c1Scalar=0., c2Scalar=0., Mu, Nu, Lambda1, Lambda2, dt;
     num PhiLast, Delta, PhiX, PhiY, IDivU, IDivD, IDivL, IDivR;
     num Temp1, Temp2, Dist1, Dist2, PhiTol;
     int Iter, i, j, Channel, MaxIter, Success = 2;

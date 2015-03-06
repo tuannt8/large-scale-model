@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		A6D193E61AA8637100C507AC /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = A6D193E51AA8637100C507AC /* main.c */; };
+		A6D194231AA99AC300C507AC /* cliio.c in Sources */ = {isa = PBXBuildFile; fileRef = A6D1941F1AA99AC300C507AC /* cliio.c */; };
+		A6D194241AA99AC300C507AC /* imageio.c in Sources */ = {isa = PBXBuildFile; fileRef = A6D194211AA99AC300C507AC /* imageio.c */; };
+		A6D194271AA99AF800C507AC /* basic.c in Sources */ = {isa = PBXBuildFile; fileRef = A6D194251AA99AF800C507AC /* basic.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -27,6 +30,12 @@
 		A6D193E51AA8637100C507AC /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		A6D193EA1AA8663300C507AC /* util.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = util.h; sourceTree = "<group>"; };
 		A6D193EF1AA88AB100C507AC /* define.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = define.h; sourceTree = "<group>"; };
+		A6D1941F1AA99AC300C507AC /* cliio.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cliio.c; sourceTree = "<group>"; };
+		A6D194201AA99AC300C507AC /* cliio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cliio.h; sourceTree = "<group>"; };
+		A6D194211AA99AC300C507AC /* imageio.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = imageio.c; sourceTree = "<group>"; };
+		A6D194221AA99AC300C507AC /* imageio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = imageio.h; sourceTree = "<group>"; };
+		A6D194251AA99AF800C507AC /* basic.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = basic.c; sourceTree = "<group>"; };
+		A6D194261AA99AF800C507AC /* basic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = basic.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -59,11 +68,25 @@
 		A6D193E41AA8637100C507AC /* imgSeg */ = {
 			isa = PBXGroup;
 			children = (
+				A6D1941E1AA99AA000C507AC /* Image handle */,
 				A6D193E51AA8637100C507AC /* main.c */,
 				A6D193EA1AA8663300C507AC /* util.h */,
 				A6D193EF1AA88AB100C507AC /* define.h */,
 			);
 			path = imgSeg;
+			sourceTree = "<group>";
+		};
+		A6D1941E1AA99AA000C507AC /* Image handle */ = {
+			isa = PBXGroup;
+			children = (
+				A6D194251AA99AF800C507AC /* basic.c */,
+				A6D194261AA99AF800C507AC /* basic.h */,
+				A6D1941F1AA99AC300C507AC /* cliio.c */,
+				A6D194201AA99AC300C507AC /* cliio.h */,
+				A6D194211AA99AC300C507AC /* imageio.c */,
+				A6D194221AA99AC300C507AC /* imageio.h */,
+			);
+			name = "Image handle";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -121,7 +144,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A6D194231AA99AC300C507AC /* cliio.c in Sources */,
 				A6D193E61AA8637100C507AC /* main.c in Sources */,
+				A6D194271AA99AF800C507AC /* basic.c in Sources */,
+				A6D194241AA99AC300C507AC /* imageio.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
