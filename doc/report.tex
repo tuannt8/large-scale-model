@@ -1,4 +1,4 @@
-\documentclass[a4paper]{report}
+\documentclass[a4paper,notitlepage]{article}
 %% Packages %%
 \usepackage{hyperref}
 \usepackage{color}
@@ -15,12 +15,13 @@
 
 \mathtoolsset{showonlyrefs=true} %% Equations numbers are only shown if they are referred to.
 
-\usepackage[ruled,linesnumbered,resetcount,algochapter]{algorithm2e} %% For producing nice pseudo code algorithms
+\usepackage[ruled,linesnumbered,resetcount]{algorithm2e} %% For producing nice pseudo code algorithms
 
 \usepackage[parfill]{parskip} % line break between graph and no indent
 \setlength{\parindent}{1em} % New paragraph indentation
 
 \graphicspath{{../images/}}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %													%
@@ -33,6 +34,7 @@
 \newcommand{\Department}{DTU Compute}
 \newcommand{\Date}{\today}
 \newcommand{\Nameone}{Tuan Nguyen Trung}
+\newcommand{\studentID}{146770}
 \newcommand{\Mailone}{tntr@dtu.dk}
 
 
@@ -82,44 +84,64 @@
 \titleformat{\chapter}[hang]{\normalfont\huge\bfseries}{\thechapter}{1em}{}
 
 \begin{document}
-\begin{titlepage}
- 	\begin{center}
-		% Upper part of the page
-		%\includegraphics[scale=1]{dtulogo}\\[2.5cm]
-		%\vspace*{\fill}
-		\noindent \textsc{\Large \Department }\\[0.2cm]
- 		% Title
-		\HRule \\[0.4cm]
-		{ \huge \bfseries \Title}\\[0.4cm]
- 		\HRule \\[1 cm]
- 		% Author and supervisor
-		\begin{minipage}{0.6\textwidth}
-			\large
-		%	\emph{Author:}	\\
-		%	\newline\newline 
-			\Nameone, \Mailone
-			\newline \newline \newline
+    
+%\begin{titlepage}
+% 	\begin{center}
+%		% Upper part of the page
+%		%\includegraphics[scale=1]{dtulogo}\\[2.5cm]
+%		%\vspace*{\fill}
+%		\noindent \textsc{\Large \Department }\\[0.2cm]
+% 		% Title
+%		\HRule \\[0.4cm]
+%		{ \huge \bfseries \Title}\\[0.4cm]
+% 		\HRule \\[1 cm]
+% 		% Author and supervisor
+%		\begin{minipage}{0.6\textwidth}
+%			\large
+%		%	\emph{Author:}	\\
+%		%	\newline\newline 
+%			\Nameone, \Mailone
+%			\newline \newline \newline
+%
+%			 
+%		%	\rule{140pt}{0.5pt}\\
+%		%	\newline
+%		\end{minipage}		
+%		\vfill
+% 	\end{center}
+%     
+%        \vfill
+%	\begin{center}
+%		{\large \Date}
+%	\end{center}
+%\end{titlepage}
 
-			 
-		%	\rule{140pt}{0.5pt}\\
-		%	\newline
-		\end{minipage}		
-		\vfill
- 	\end{center}
-	\begin{center}
-		{\large \Date}
-	\end{center}
-\end{titlepage}
+\begin{center}
+    
+\vspace{5mm}
+{\huge \Title} \\[20pt]
 
-\newpage
-\input{summary.tex}
-\newpage
-\tableofcontents
-\newpage
-\listoffigures
-\newpage
+{\large \Author \ \{\studentID\ - \Mailone\} } \\[20pt]
+%\vfill
+{\large Project for 02616 - Large Scale Model} \\
+\Date
+\vfill
+\begin{abstract}
+    This paper studies parallel algorithm for active contour model proposed by Chan and Vese \cite{Chan2001}. The purpose is to segment regions of image by minimizing Mumford-Shah model. The paper studies serial algorithm, written by Getreuer \cite{Getreuer2012}, and improve this version using Open MPI.
+\end{abstract}
+\vfill
+
+\end{center}
+
+
+%\newpage
+%\input{summary.tex}
+%\newpage
+%\tableofcontents
+%\newpage
+%\listoffigures
+%\newpage
 %%%%%%%%%%%%%%%%%%%% Start text inputs
-
 \input{chan-vese-intro.tex}
 \input{implementation.tex}
 \input{tunning.tex}
@@ -131,9 +153,9 @@
 \bibliography{citation}
 
 %%%%%%%%%%%%%%%%%%% Start appendix
-\newpage
-\appendix
-\input{appendix.tex}
+%\newpage
+%\appendix
+%\input{appendix.tex}
 
 %%%%%%%%%%%%%%%%%%% End
 \end{document}

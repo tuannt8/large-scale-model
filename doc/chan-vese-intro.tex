@@ -1,19 +1,21 @@
-\chapter{Active contour without edge}
 
-Chan and Vese \cite{Chan2001}.
-
-Sample code \cite{Getreuer2012}.
-
-Purpose: Solve the minimization Mumford-Shah for image segmentation
+%\begin{abstract}
+%This paper studies parallel algorithm for active contour model proposed by Chan and Vese \cite{Chan2001}. The purpose is to segment regions of image by minimizing Mumford-Shah model. The paper studies serial algorithm, written by Getreuer \cite{Getreuer2012}, and improve this version using Open MPI.
+%\end{abstract}
 
 
-\subsubsection{Discretization}
+\section{Active contour without edge discretization}
 
-Gray scale image: $\mathbf{I}$, size $m \times n$. Pixel value: $[0..1]$
+Mumford-Shah model:
 
-level set function: $\Phi$ on domain of the image. Level set function is discretized to same size of the image.
+\begin{equation}
+E = \mu \text{ length}(C) 
++ \lambda\int_{\Omega}(f(x) - u(x))^2 dx
++ \int_{\Omega \\ C}|\nabla u(x)|^2 dx
+\end{equation}
+where $\Omega$ denotes the image region. $C$ denotes the contour of the region, which is a parametric curve. $f(x)$ is the intensity of image pixels. $u(x)$ is the piecewise function that approximate the image. $\mu$ and $\lambda$ is constant.
 
-Final Chan-Vese model for level set function of minimal Mumford-Shah
+$u(x)$ is represented using level set function: $\Phi$ on domain of the image. Level set function is discretized to same size of the image. Final Chan-Vese model for level set function of minimal Mumford-Shah
 
 \begin{equation}
     \left\{ 
@@ -35,8 +37,6 @@ Final Chan-Vese model for level set function of minimal Mumford-Shah
 
 \begin{equation}
     \begin{aligned}
-        & 	\Omega \text{ is the image domain } \\
-        & 	f \text{ is the image} \\
         &	c_1 \text{ and } c_2 \text{ is the mean intensity of the region inside and outside} \\
         & 	\overrightarrow{n} 
             \text{ is outward normal of the image boundary} \\
@@ -48,7 +48,7 @@ Final Chan-Vese model for level set function of minimal Mumford-Shah
     \end{aligned}
 \end{equation}
 
-\textbf{Numerical implementation}
+For implementation, level set function is discretized to a matrix same size of the image. The final function to compute $\phi$
 
 \begin{equation}
     \begin{aligned}
@@ -63,9 +63,9 @@ Final Chan-Vese model for level set function of minimal Mumford-Shah
                         \lambda_2(f_{i, j} - c_2)^2 
                         \left. \right]
     \end{aligned}
+    \label{eq:phi}
 \end{equation}
-
-$A$ and $B$ are matrix same size with $\phi$.
+where $A$ and $B$ are matrix same size with $\phi$.
 
 \begin{equation}
     A_{i, j} = \frac{\mu}
@@ -73,6 +73,7 @@ $A$ and $B$ are matrix same size with $\phi$.
                        + (\nabla_x^+ \phi_{i, j} )^2
                        + (\nabla_y^0 \phi_{i, j} )^2 }
                 }
+    \label{eq:a}
 \end{equation}
 
 \begin{equation}
@@ -81,9 +82,12 @@ $A$ and $B$ are matrix same size with $\phi$.
                             + (\nabla_x^0 \phi_{i, j} )^2
                             + (\nabla_y^+ \phi_{i, j} )^2 } 
                     }
+    \label{eq:b}
 \end{equation}
 
-Forward, backward and central difference
+
+
+$\Delta \phi(i, j)$ denotes the difference of the level set function. There are forward, backward and central difference
 
 \begin{equation}
     \begin{aligned}
@@ -93,15 +97,18 @@ Forward, backward and central difference
     \end{aligned}
 \end{equation}
 
-\begin{algorithm}[!htb]
+\section{Serial algorithm}
+Sample code is written by Getreuer \cite{Getreuer2012}. The algorithm is described in algorithm \ref{alg:chan-vese}.The sample results is shown in fig. \ref{fig:seg} and fig. \ref*{fig:prog}
+
+\begin{algorithm}[hb]
     \DontPrintSemicolon
     \KwData{Image $I$}
     Initialize $\phi$ \;
     \For{ n = 1, .. }{
         Compute $c_1$ and $c_2$ \;
         \Begin(Compute $\phi^{n+1}$){
-            Compute $A$ and $B$ \;
-            Compute $\frac{\partial \phi}{\partial t}$ \;
+            Compute $A$ and $B$ \eqref{eq:a}, \eqref{eq:b}\;
+            Compute $\frac{\partial \phi}{\partial t}$ \eqref{eq:phi}\;
             Compute $\phi^{n+1} = \phi^n + \frac{\partial \phi}{\partial t} \Delta t$
         }
         
@@ -112,20 +119,48 @@ Forward, backward and central difference
     \label{alg:chan-vese}
 \end{algorithm}
 
-Dependency: Require neighbour pixel.
 
-For parallel computation with MPI.
-\begin{algorithm}[!htb]
+
+\begin{figure}[ht]
+    \centering
+    \begin{tabular}{cc}
+        \includegraphics[scale=0.2]{serial_1/fox} & \includegraphics[scale=0.2]{serial_1/final} \\
+        \small a) Original image & \small b) Segmented image
+    \end{tabular}
+    \caption{Image segmentation}
+    \label{fig:seg}
+\end{figure}
+
+\begin{figure}[!htb]
+    \centering
+    \newcommand{\imgFoxProg}[1]{\includegraphics[trim=3cm 1cm 3cm 1cm, clip, scale=0.12]{serial_1/#1}}
+    \imgFoxProg{1} \imgFoxProg{2} \imgFoxProg{3} \imgFoxProg{4} 
+    \caption{Progress of segmentation}
+    \label{fig:prog}
+\end{figure}
+
+\section{Parallel algorithm}
+
+Dependency in algorithm \ref{alg:chan-vese}:
+\begin{itemize}
+    \item Computation of average intensity $c_1$ and $c_2$ are collective sum
+    \item Computation of $\phi(i, j)$ depends on neighbour pixels
+    \item Computation of error $|\phi^{n+1} - \phi^n|$ is collective sum
+\end{itemize}
+
+\noindent The algorithm for parallel MPI is shown in algorithm \ref{alg:chan-vese-mpi}. We need to discretize the image and the domain of level set funstion 
+
+\begin{algorithm}[hb]
     \DontPrintSemicolon
-    \KwData{Partial image $I_i$}
+    \KwData{Partial image $f_i$}
     Initialize partial level set function $\phi_i$ \;
     \For{ n = 1, .. }{
-        Compute $c_1$ and $c_2$ locally\;
+        Compute $c_1$ and $c_2$ from $f_i$ locally\;
         MPI: Collective sum of $c_1$ and $c_2$ \;\;
         
         \Begin(Compute $\phi_i^{n+1}$ locally){
-            Compute $A_i$ and $B_i$ \;
-            Compute $\frac{\partial \phi_i}{\partial t}$ \;
+            Compute $A_i$ and $B_i$ from from $f_i$ and $\phi_i^n$ \eqref{eq:a} \eqref{eq:b}\;
+            Compute $\frac{\partial \phi_i}{\partial t}$ from  \eqref{eq:phi}\;
             Compute $\phi_i^{n+1} = \phi_i^n + \frac{\partial \phi_i}{\partial t} \Delta t$
         }\;
         

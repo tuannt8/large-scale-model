@@ -274,6 +274,21 @@ void ChanVeseInitPhi(num *Phi, int Width, int Height)
     for(j = 0; j < Height; j++)
         for(i = 0; i < Width; i++)
             *(Phi++) = (num)(sin(i*M_PI/5.0)*sin(j*M_PI/5.0));
+//        {
+//            *(Phi) = (num)(-1.0);
+//            
+//            int cx = Width/2.0;
+//            int cy = Height / 2.0;
+//            int R2 = (Height /3.0) * (Height /3.0);
+//            int r2 =(i-cx)*(i-cx) + (j-cy)*(j-cy);
+//            if (r2 < R2) {
+//                *Phi = (num)(1.0);
+//            }
+//            
+//            Phi++;
+//        }
+    
+    
 }
 
 
