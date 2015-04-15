@@ -5,13 +5,13 @@
 #PBS -l nodes=4:ppn=4
 #PBS -q hpc
 
-TARGET="mat_vec_mul_nonblock mat_vec_mul_nonblock_row"
+TARGET="gol"
+NB_PROCS=10
 
 cd $PBS_O_WORKDIR
 cat $PBS_NODEFILE
 
 module load mpi
 MPIRUN=mpirun
-$MPIRUN -n 10 mat_vec_mul_nonblock 70000
-$MPIRUN -n 10  mat_vec_mul_nonblock_row 70000 
+$MPIRUN -n $NB_PROCS gol_block 10000	
 

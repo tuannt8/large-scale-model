@@ -302,7 +302,7 @@ void exchange_boundary(){
 
 }
 
-inline int block_idx(int x, int y){
+int block_idx(int x, int y){
     return y*g.bl_dim_x + x;
 }
 

@@ -11,7 +11,7 @@ CXX_FLAGS = -std=gnu99
 all:$(TARGET)
 
 #Build all
-%: %.c util.h
+%: %.c
 	$(CXX) $(CXX_FLAGS)  $< -o $@
 
 .PHONY: clean cleantemp
@@ -19,3 +19,4 @@ clean:
 	rm -f -r $(OBJECT) $(TARGET)
 cleantemp:
 	rm -f -r *~
+

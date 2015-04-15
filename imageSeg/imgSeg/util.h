@@ -118,7 +118,7 @@ extern inline void set_phi_data(int x, int y, int inten);
 extern inline int local_array_idx(int x, int y);
 vec2 global_idx_convert(vec2 local);
 
-extern inline int block_idx(int x, int y);
+int block_idx(int x, int y);
 
 /////////////////////////////////////////////////
 // Memory allocation and release

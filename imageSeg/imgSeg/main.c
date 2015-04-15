@@ -32,7 +32,7 @@ void init_data(){
 }
 
 int main(int argc, char* argv[]){
-    
+
     /*
         Memory allocation and variable initializtion
      */
@@ -47,9 +47,10 @@ int main(int argc, char* argv[]){
         1. Parse arguments
             And print debug information
     */
+
     parse_arguments(argc, argv);
     print_info();
-    
+
     /* 
         2. Read image
             Compute optimal block size and number of procs
