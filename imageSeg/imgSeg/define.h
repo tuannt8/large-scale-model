@@ -11,39 +11,42 @@
 ///////////////////////////////////////////////////////////////
 // PROGRAM SETTING
 
-// Comment for double precision
-#define SINGLE_PRECISION
+#define NUM_SINGLE
 
 // Comment for release mode
-#define DEBUG
+//#define DEBUG
 
 ///////////////////////////////////////////////////////////////
 // GLOBAL VARIABLES
 
-// Process parameters
-extern int size, rank;
-extern const int main_proc;
-
 
 ///////////////////////////////////////////////////////////////
-#ifdef SINGLE_PRECISION
+#ifdef NUM_SINGLE
 typedef float num;
+#define MPI_NUM MPI_FLOAT
 #else
 typedef double num;
+#define MPI_NUM MPI_DOUBLE
 #endif /* SINGLE_PRECISION */
+
+#define DIVIDE_EPS       ((num)1e-16)
+#define BOUND_O_LAP         2
 
 ///////////////////////////////////////////////////////////////
 // MARCO
 
 // LOG(char*)
 // Log by main proc
-#define LOG(a, ...)     if(rank == main_proc){ \
+#define LOG(a, ...)     if(g.rank == g.main_proc){ \
 printf(a, ##__VA_ARGS__); \
 }
 
-// LOG_ALL(char*)
+#define LOG_LINE LOG("====================================\n");
+
+// LOG_ALL(char*)               |
+//-------------------------------
 // Log by all procs
-#define LOG_ALL(a, ...)   printf("[%d / %d: ]", rank, size); \
+#define LOG_ALL(a, ...)   printf("[%d / %d: ]", g.rank, g.size); \
 printf(a, ##__VA_ARGS__); \
 
 // assert(bool)
@@ -54,3 +57,8 @@ printf(a, ##__VA_ARGS__); \
 #endif /* DEBUG */
 
 #endif /* imageSeg_define_h */
+
+
+///////////////////////////////////////////////////////////////
+// Other
+//#define MAX_STRING_T 500;

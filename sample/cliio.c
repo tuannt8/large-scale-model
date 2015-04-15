@@ -50,6 +50,7 @@ int ReadImageObj(image *f, const char *FileName)
     }
     
     f->NumChannels = (IsGrayscale(f->Data, f->Width, f->Height)) ? 1:3;
+
     return 1;
 }
 

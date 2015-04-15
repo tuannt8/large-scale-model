@@ -7,14 +7,14 @@
 	<key>IDESourceControlProjectIdentifier</key>
 	<string>A6CBCA5E-957C-49BF-B352-EAF7C68C2D47</string>
 	<key>IDESourceControlProjectName</key>
-	<string>imageSeg</string>
+	<string>project</string>
 	<key>IDESourceControlProjectOriginsDictionary</key>
 	<dict>
 		<key>A7BC07440CFA682CD4E6BC18BC1FEE3347BF80F3</key>
 		<string>https://github.com/tuannt8/large-scale-model</string>
 	</dict>
 	<key>IDESourceControlProjectPath</key>
-	<string>imageSeg/imageSeg.xcodeproj</string>
+	<string>imageSeg/imageSeg.xcodeproj/project.xcworkspace</string>
 	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
 	<dict>
 		<key>A7BC07440CFA682CD4E6BC18BC1FEE3347BF80F3</key>

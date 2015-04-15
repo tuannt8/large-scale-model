@@ -20,10 +20,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "cliio.h"
+#include "imageio.h"
 
 #include "chanvese.h"
 
-#define Malloc(s)    malloc(s)
 #define Free(p)      free(p)
 
 #define DIVIDE_EPS       ((num)1e-16)
@@ -69,7 +70,7 @@ int ChanVeseSimplePlot(int State, int Iter, num Delta,
 
 /** @brief Default options struct */
 static struct chanvesestruct DefaultChanVeseOpt =
-        {(num)1e-3, 500, (num)0.25, 0, 1, 1, (num)0.5,
+        {(num)1e-3, 100, (num)0.25, 0, 1, 1, (num)0.5,
         ChanVeseSimplePlot, NULL};
         
 
@@ -158,8 +159,8 @@ int ChanVese(num *Phi, const num *f,
     
     if(NumChannels > 1)
     {
-        if(!(c1 = Malloc(sizeof(num)*NumChannels))
-            || !(c2 = Malloc(sizeof(num)*NumChannels)))
+        if(!(c1 = malloc(sizeof(num)*NumChannels))
+            || !(c2 = malloc(sizeof(num)*NumChannels)))
             return 0;
     }
     else
@@ -191,10 +192,10 @@ int ChanVese(num *Phi, const num *f,
                 il = (i == 0) ? 0 : -1;
                 ir = (i == Width - 1) ? 0 : 1;
                 
-                Delta = dt/(M_PI*(1 + PhiPtr[0]*PhiPtr[0]));
-                PhiX = PhiPtr[ir] - PhiPtr[0];
-                PhiY = (PhiPtr[id] - PhiPtr[iu])/2;
-                IDivR = (num)(1/sqrt(DIVIDE_EPS + PhiX*PhiX + PhiY*PhiY));
+                Delta = dt/(M_PI*(1 + PhiPtr[0]*PhiPtr[0])); // Delta
+                PhiX = PhiPtr[ir] - PhiPtr[0]; // grad plus x
+                PhiY = (PhiPtr[id] - PhiPtr[iu])/2; // Grad mid y
+                IDivR = (num)(1/sqrt(DIVIDE_EPS + PhiX*PhiX + PhiY*PhiY)); // A(i,j)
                 PhiX = PhiPtr[0] - PhiPtr[il];
                 IDivL = (num)(1/sqrt(DIVIDE_EPS + PhiX*PhiX + PhiY*PhiY));
                 PhiX = (PhiPtr[ir] - PhiPtr[il])/2;
@@ -235,6 +236,7 @@ int ChanVese(num *Phi, const num *f,
                 PhiDiffNorm += PhiDiff * PhiDiff;
             }
         }
+
         
         PhiDiffNorm = sqrt(PhiDiffNorm/NumEl);
         RegionAverages(c1, c2, Phi, f, Width, Height, NumChannels);
@@ -274,20 +276,6 @@ void ChanVeseInitPhi(num *Phi, int Width, int Height)
     for(j = 0; j < Height; j++)
         for(i = 0; i < Width; i++)
             *(Phi++) = (num)(sin(i*M_PI/5.0)*sin(j*M_PI/5.0));
-//        {
-//            *(Phi) = (num)(-1.0);
-//            
-//            int cx = Width/2.0;
-//            int cy = Height / 2.0;
-//            int R2 = (Height /3.0) * (Height /3.0);
-//            int r2 =(i-cx)*(i-cx) + (j-cy)*(j-cy);
-//            if (r2 < R2) {
-//                *Phi = (num)(1.0);
-//            }
-//            
-//            Phi++;
-//        }
-    
     
 }
 
@@ -385,7 +373,7 @@ chanveseopt *ChanVeseNewOpt()
 {
     chanveseopt *Opt;
         
-    if((Opt = (chanveseopt *)Malloc(sizeof(struct chanvesestruct))))
+    if((Opt = (chanveseopt *)malloc(sizeof(struct chanvesestruct))))
         *Opt = DefaultChanVeseOpt;
     
     return Opt;

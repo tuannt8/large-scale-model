@@ -4,18 +4,39 @@
 %\end{abstract}
 
 
-\section{Active contour without edge discretization}
+\chapter{Active Contour without Edge}
+\label{chap:chan}
 
-Mumford-Shah model:
+Active contour model tries to approximate an image to make the image be smoother. This method is often used in image segmentation (Fig. \ref{fig:seg}).
+
+\begin{figure}[ht]
+    \centering
+    \begin{tabular}{cc}
+        \includegraphics[scale=0.2]{serial_1/fox} & \includegraphics[scale=0.2]{serial_1/final} \\
+        \small a) Original image & \small b) Approximated image
+       \end{tabular}
+       \caption{Image segmentation}
+       \label{fig:seg}
+\end{figure} 
+
+Active contour without edge is proposed by Chan and Vese \cite{Chan2001}. This method find the approximated image by minimizing Mumford-Shah model:
 
 \begin{equation}
 E = \mu \text{ length}(C) 
 + \lambda\int_{\Omega}(f(x) - u(x))^2 dx
 + \int_{\Omega \\ C}|\nabla u(x)|^2 dx
 \end{equation}
-where $\Omega$ denotes the image region. $C$ denotes the contour of the region, which is a parametric curve. $f(x)$ is the intensity of image pixels. $u(x)$ is the piecewise function that approximate the image. $\mu$ and $\lambda$ is constant.
+where
+{\small
+\begin{itemize}
+    \item $\Omega$ denotes the image region
+    \item $C$ denotes the contour of the region
+    \item $f(x)$ is the intensity of image
+    $\mu$ and $\lambda$ is constant
+\end{itemize}
+}
 
-$u(x)$ is represented using level set function: $\Phi$ on domain of the image. Level set function is discretized to same size of the image. Final Chan-Vese model for level set function of minimal Mumford-Shah
+Generally, $u(x)$ is represented using level set function $\Phi$ on the domain of the image. Level set function is discretized to same size of the image. Final Chan-Vese model for level set function of minimal Mumford-Shah:
 
 \begin{equation}
     \left\{ 
@@ -34,21 +55,19 @@ $u(x)$ is represented using level set function: $\Phi$ on domain of the image. L
         \end{aligned}
     \right.
 \end{equation}
+where
 
-\begin{equation}
-    \begin{aligned}
-        &	c_1 \text{ and } c_2 \text{ is the mean intensity of the region inside and outside} \\
-        & 	\overrightarrow{n} 
-            \text{ is outward normal of the image boundary} \\
-        & 	\phi 
-            \text{ is the level set function} \\
-        & 	\delta_{\epsilon}(\phi) = \frac{\epsilon}{\pi (\epsilon^2 + \phi^2)} 
-            \text{ is Dirac function. Derivative of heaviside funstion} H_{\epsilon}(t) \\
-        & \nu,\ \eta,\ \lambda_1 \text{ and } \lambda_2 \text{ are constant}
-    \end{aligned}
-\end{equation}
+{\small
+\begin{itemize}
+    \item $c_1$  and $c_2$ is the mean intensity of the region inside and outside
+    \item $\overrightarrow{n}$ is outward normal of the image boundary
+    \item $\phi$ is the level set function
+    \item $\delta_{\epsilon}(\phi) = \frac{\epsilon}{\pi (\epsilon^2 + \phi^2)}$ is Dirac function. Derivative of heaviside function $H_{\epsilon}(t)$
+    \item $\nu$, $\eta$, $\lambda_1$ and $\lambda_2$ are constants.
+\end{itemize}
+}
 
-For implementation, level set function is discretized to a matrix same size of the image. The final function to compute $\phi$
+For implementation, level set function is discretized to a matrix same size of the image. The convolution of $\phi$
 
 \begin{equation}
     \begin{aligned}
@@ -84,9 +103,6 @@ where $A$ and $B$ are matrix same size with $\phi$.
                     }
     \label{eq:b}
 \end{equation}
-
-
-
 $\Delta \phi(i, j)$ denotes the difference of the level set function. There are forward, backward and central difference
 
 \begin{equation}
@@ -97,7 +113,8 @@ $\Delta \phi(i, j)$ denotes the difference of the level set function. There are 
     \end{aligned}
 \end{equation}
 
-\section{Serial algorithm}
+\chapter{Serial Algorithm}
+\label{chap:serial}
 Sample code is written by Getreuer \cite{Getreuer2012}. The algorithm is described in algorithm \ref{alg:chan-vese}.The sample results is shown in fig. \ref{fig:seg} and fig. \ref*{fig:prog}
 
 \begin{algorithm}[hb]
@@ -120,17 +137,6 @@ Sample code is written by Getreuer \cite{Getreuer2012}. The algorithm is describ
 \end{algorithm}
 
 
-
-\begin{figure}[ht]
-    \centering
-    \begin{tabular}{cc}
-        \includegraphics[scale=0.2]{serial_1/fox} & \includegraphics[scale=0.2]{serial_1/final} \\
-        \small a) Original image & \small b) Segmented image
-    \end{tabular}
-    \caption{Image segmentation}
-    \label{fig:seg}
-\end{figure}
-
 \begin{figure}[!htb]
     \centering
     \newcommand{\imgFoxProg}[1]{\includegraphics[trim=3cm 1cm 3cm 1cm, clip, scale=0.12]{serial_1/#1}}
@@ -138,40 +144,3 @@ Sample code is written by Getreuer \cite{Getreuer2012}. The algorithm is describ
     \caption{Progress of segmentation}
     \label{fig:prog}
 \end{figure}
-
-\section{Parallel algorithm}
-
-Dependency in algorithm \ref{alg:chan-vese}:
-\begin{itemize}
-    \item Computation of average intensity $c_1$ and $c_2$ are collective sum
-    \item Computation of $\phi(i, j)$ depends on neighbour pixels
-    \item Computation of error $|\phi^{n+1} - \phi^n|$ is collective sum
-\end{itemize}
-
-\noindent The algorithm for parallel MPI is shown in algorithm \ref{alg:chan-vese-mpi}. We need to discretize the image and the domain of level set funstion 
-
-\begin{algorithm}[hb]
-    \DontPrintSemicolon
-    \KwData{Partial image $f_i$}
-    Initialize partial level set function $\phi_i$ \;
-    \For{ n = 1, .. }{
-        Compute $c_1$ and $c_2$ from $f_i$ locally\;
-        MPI: Collective sum of $c_1$ and $c_2$ \;\;
-        
-        \Begin(Compute $\phi_i^{n+1}$ locally){
-            Compute $A_i$ and $B_i$ from from $f_i$ and $\phi_i^n$ \eqref{eq:a} \eqref{eq:b}\;
-            Compute $\frac{\partial \phi_i}{\partial t}$ from  \eqref{eq:phi}\;
-            Compute $\phi_i^{n+1} = \phi_i^n + \frac{\partial \phi_i}{\partial t} \Delta t$
-        }\;
-        
-        Compute error $|\phi_i^{n+1} - \phi_i^n|$ locally \;
-        MPI: Collective total error $e$ \;
-        \textbf{if} $e < thres$ \textbf{then stop}  \; \;
-        
-        MPI: Exchange boundaries \;
-        
-    }
-    
-    \caption{OpenMPI algorithm}
-    \label{alg:chan-vese-mpi}
-\end{algorithm}

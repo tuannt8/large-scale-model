@@ -1,0 +1,85 @@
+
+\section{Algorithm}
+Dependency in algorithm \ref{alg:chan-vese}:
+\begin{itemize}
+    \item Computation of average intensity $c_1$ and $c_2$ are collective sum
+    \item Computation of $\phi(i, j)$ depends on neighbour pixels
+    \item Computation of error $|\phi^{n+1} - \phi^n|$ is collective sum
+\end{itemize}
+
+\noindent The algorithm for parallel MPI is shown in algorithm \ref{alg:chan-vese-mpi}. We need to discretize the image and the domain of level set funstion 
+
+\begin{algorithm}[!htb]
+    \DontPrintSemicolon
+    \KwData{Partial image $f_i$}
+    Load partial image in each process
+    Initialize partial level set function $\phi_i$ \;
+    \For{ n = 1, .. }{
+        Compute $c_1$ and $c_2$ from $f_i$ locally\;
+        MPI: Collective sum of $c_1$ and $c_2$ \;\;
+        
+        \Begin(Compute $\phi_i^{n+1}$ locally){
+            Compute $A_i$ and $B_i$ from from $f_i$ and $\phi_i^n$ \eqref{eq:a} \eqref{eq:b}\;
+            Compute $\frac{\partial \phi_i}{\partial t}$ from  \eqref{eq:phi}\;
+            Compute $\phi_i^{n+1} = \phi_i^n + \frac{\partial \phi_i}{\partial t} \Delta t$
+        }\;
+        
+        Compute error $|\phi_i^{n+1} - \phi_i^n|$ locally \;
+        MPI: Collective total error $e$ \;
+        \textbf{if} $e < thres$ \textbf{then stop}  \; \;
+        
+        MPI: Exchange boundaries \;
+        
+    }
+    
+    \caption{OpenMPI algorithm}
+    \label{alg:chan-vese-mpi}
+\end{algorithm}
+
+\section{Implementation}
+\textbf{Data discretization:} The image domain is discretized to 2-dimensional grid. Each grid element is a square area size $\text{block\_size} \times \text{block\_size}$, and it corresponds with a MPI process. Because we need the neighbour data, the buffer data in each block is 2 pixel larger than the block size.
+
+\begin{figure}[!htb]
+    \centering
+    \includegraphics[trim = 20cm 20cm 20cm 15cm, clip, scale = 0.04]{block_demo}
+    \caption{Discretization of image domain}
+    \label{fig:dis}
+\end{figure}
+
+The blocks are stored by row order.
+
+\noindent\textbf{Init level set function:} Level set is a two-dimensional function $\phi = \phi(x,y)$. We discretize this function to same size with the image $\phi = \phi_{i,j}$. We use the same discretization for the image and the level set. A simple initialization of $\phi$ is
+\begin{equation}
+    \phi(i,j) = \sin\frac{i\pi}{5} * \sin\frac{j\pi}{5}
+\end{equation}
+
+The initialized level set function look like:
+\begin{figure}[!htb]
+    \centering
+    \includegraphics[scale=0.07]{phi_init}
+    \caption{Initialization of level set function (Zoom is $50 \times 30$ pixels)}
+\end{figure}
+
+\noindent\textbf{Intensity average:} To compute the average intensity of inside region and out side region, we compute total intensity in reach block and use MPI\_reduce to sum the total intensity. Sample code is in appendix \ref{apdx:regionAverage}.
+
+\noindent\textbf{Update level set function:} As explain in chapter \ref{chap:chan}.
+
+\noindent\textbf{Exchange boundary:} Boundary of level set function need to be update after each iteration. We use MPI\_Send and MPI\_Recv to transfer the data. Code is in appendix 
+
+\noindent\textbf{Gather level set function:} To obtain full level set, we have to collect parts from all processes. Code in appendix \ref{apdx:gatherphi}
+
+\section{Results}
+
+\newcommand{\figPhi}[1]{\includegraphics[scale = 0.1]{phi_1/#1}}
+\begin{figure}[!htb]
+    \centering
+    \begin{tabular}{cc}
+        \figPhi{1} & \figPhi{10} \\
+        iter 1 & iter 10 \\
+        \figPhi{15} & \figPhi{20} \\
+        iter 15 & iter 20 \\
+        \figPhi{40} & \figPhi{100} \\
+        iter 40 & iter 100
+    \end{tabular}
+     \caption{Segmented image progress}
+\end{figure}

@@ -86,7 +86,9 @@
 
 int IdentifyImageType(char *Type, const char *FileName);
 
-void *ReadImage(int *Width, int *Height,
+int ReadImageSize_BMP(int *Width, int *Height, const char *FileName);
+
+void * ReadImage(int *Width, int *Height,
     const char *FileName, unsigned Format);
 
 int WriteImage(void *Image, int Width, int Height,

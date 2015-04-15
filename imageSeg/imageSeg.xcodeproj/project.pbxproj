@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A6313A6C1AD804680003C056 /* sub_image.c in Sources */ = {isa = PBXBuildFile; fileRef = A6313A6A1AD804680003C056 /* sub_image.c */; };
+		A6585E6E1AC16BED00A24A59 /* util.c in Sources */ = {isa = PBXBuildFile; fileRef = A6585E6D1AC16BED00A24A59 /* util.c */; };
 		A6D193E61AA8637100C507AC /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = A6D193E51AA8637100C507AC /* main.c */; };
 		A6D194231AA99AC300C507AC /* cliio.c in Sources */ = {isa = PBXBuildFile; fileRef = A6D1941F1AA99AC300C507AC /* cliio.c */; };
 		A6D194241AA99AC300C507AC /* imageio.c in Sources */ = {isa = PBXBuildFile; fileRef = A6D194211AA99AC300C507AC /* imageio.c */; };
@@ -26,6 +28,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A6313A6A1AD804680003C056 /* sub_image.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sub_image.c; sourceTree = "<group>"; };
+		A6585E6D1AC16BED00A24A59 /* util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = util.c; sourceTree = "<group>"; };
 		A6D193E21AA8637100C507AC /* imgSeg */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = imgSeg; sourceTree = BUILT_PRODUCTS_DIR; };
 		A6D193E51AA8637100C507AC /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		A6D193EA1AA8663300C507AC /* util.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = util.h; sourceTree = "<group>"; };
@@ -71,7 +75,9 @@
 				A6D1941E1AA99AA000C507AC /* Image handle */,
 				A6D193E51AA8637100C507AC /* main.c */,
 				A6D193EA1AA8663300C507AC /* util.h */,
+				A6585E6D1AC16BED00A24A59 /* util.c */,
 				A6D193EF1AA88AB100C507AC /* define.h */,
+				A6313A6A1AD804680003C056 /* sub_image.c */,
 			);
 			path = imgSeg;
 			sourceTree = "<group>";
@@ -144,9 +150,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A6585E6E1AC16BED00A24A59 /* util.c in Sources */,
 				A6D194231AA99AC300C507AC /* cliio.c in Sources */,
 				A6D193E61AA8637100C507AC /* main.c in Sources */,
 				A6D194271AA99AF800C507AC /* basic.c in Sources */,
+				A6313A6C1AD804680003C056 /* sub_image.c in Sources */,
 				A6D194241AA99AC300C507AC /* imageio.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

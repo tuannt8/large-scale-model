@@ -63,6 +63,8 @@ int ReadImageObjGrayscale(image *f, const char *FileName)
         return 0;
     }
     
+
+    
     f->NumChannels = 1;
     return 1;
 }

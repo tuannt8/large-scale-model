@@ -1641,6 +1641,17 @@ static void *ConvertToFormat(uint32_t *Src, int Width, int Height,
                         + 2.301960784313725357840079e-3*((uint8_t *)&Pixel)[1]
                         + 4.470588235294117808150007e-4*((uint8_t *)&Pixel)[2];
                 }
+            {
+                float* data = (float*)DestD;
+                int width = Width;
+                int height = Height;
+                for (int y = 0; y < height; y++) {
+                    for (int x = 0; x < width ; x++) {
+                        printf("%f ", data[y*width + x]);
+                    }
+                    printf("\n");
+                }
+            }
             break;
         case 3: /* Convert RGBA U8 to RGB (or BGR) double */
             for(y = 0; y < Height; y++, Src += Width)
@@ -1664,6 +1675,8 @@ static void *ConvertToFormat(uint32_t *Src, int Width, int Height,
                 }
             break;
         }
+            
+            
         return DestD;
     default:
         return NULL;
@@ -1970,7 +1983,7 @@ int IdentifyImageType(char *Type, const char *FileName)
 * With IMAGEIO_SINGLE or IMAGEIO_DOUBLE, the components are values in the
 * range 0 to 1.
 */
-void *ReadImage(int *Width, int *Height,
+void * ReadImage(int *Width, int *Height,
     const char *FileName, unsigned Format)
 {
     void *Image = NULL;
@@ -2050,8 +2063,83 @@ void *ReadImage(int *Width, int *Height,
     else
         Image = ImageU8;
     
+    
+
+    
     return Image;
 }
+
+int ReadImageSize_BMP(int *Width, int *Height, const char *FileName){
+   FILE *File = fopen(FileName, "r");
+    if (!File) {
+        ErrorMessage("Failed to read file: %s \n", FileName);
+        goto Catch;
+    }
+
+    long int ImageDataOffset, InfoSize;
+    unsigned NumPlanes, BitsPerPixel, Compression, NumColors;
+    uint32_t RedMask, GreenMask, BlueMask, AlphaMask;
+    int  Os2Bmp;
+    uint8_t Magic[2];
+    
+    *Width = *Height = 0;
+    fseek(File, 0, SEEK_SET);
+    
+    Magic[0] = getc(File);
+    Magic[1] = getc(File);
+    
+    if(!(Magic[0] == 0x42 && Magic[1] == 0x4D) /* Verify the magic numbers */
+       || fseek(File, 8, SEEK_CUR))         /* Skip the reserved fields */
+    {
+        ErrorMessage("Invalid BMP header.\n");
+        goto Catch;
+    }
+    
+    ImageDataOffset = ReadDWordLE(File);
+    InfoSize = ReadDWordLE(File);
+    
+    /* Read the info header */
+    if(InfoSize < 12)
+    {
+        ErrorMessage("Invalid BMP info header.\n");
+        goto Catch;
+    }
+    
+    if((Os2Bmp = (InfoSize == 12)))  /* This is an OS/2 V1 infoheader */
+    {
+        *Width = (int)ReadWordLE(File);
+        *Height = (int)ReadWordLE(File);
+        NumPlanes = (unsigned)ReadWordLE(File);
+        BitsPerPixel = (unsigned)ReadWordLE(File);
+        Compression = 0;
+        NumColors = 0;
+        RedMask = 0x00FF0000;
+        GreenMask = 0x0000FF00;
+        BlueMask = 0x000000FF;
+        AlphaMask = 0xFF000000;
+    }
+    else
+    {
+        *Width = abs((int)ReadDWordLE(File));
+        *Height = abs((int)ReadDWordLE(File));
+        NumPlanes = (unsigned)ReadWordLE(File);
+        BitsPerPixel = (unsigned)ReadWordLE(File);
+        Compression = (unsigned)ReadDWordLE(File);
+        fseek(File, 12, SEEK_CUR);
+        NumColors = (unsigned)ReadDWordLE(File);
+        fseek(File, 4, SEEK_CUR);
+        RedMask = ReadDWordLE(File);
+        GreenMask = ReadDWordLE(File);
+        BlueMask = ReadDWordLE(File);
+        AlphaMask = ReadDWordLE(File);
+    }
+    
+    return 1;
+    
+Catch:
+    return 0;
+}
+
 
 
 /**

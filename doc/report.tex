@@ -1,4 +1,4 @@
-\documentclass[a4paper,notitlepage]{article}
+\documentclass[a4paper,notitlepage]{report}
 %% Packages %%
 \usepackage{hyperref}
 \usepackage{color}
@@ -10,6 +10,7 @@
 \usepackage{gensymb}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage{parallel,enumitem}
 \usepackage{url}
 \usepackage{adjustbox}
 
@@ -83,6 +84,10 @@
 \newcommand{\HRule}{\rule{\linewidth}{0.5mm}} % new command
 \titleformat{\chapter}[hang]{\normalfont\huge\bfseries}{\thechapter}{1em}{}
 
+
+\lstset{language=C++
+    ,otherkeywords={num, MPI_Allreduce, memcpy, MPI_Send, MPI_Recv}}
+
 \begin{document}
     
 %\begin{titlepage}
@@ -127,22 +132,33 @@
 \Date
 \vfill
 \begin{abstract}
-    This paper studies parallel algorithm for active contour model proposed by Chan and Vese \cite{Chan2001}. The purpose is to segment regions of image by minimizing Mumford-Shah model. The paper studies serial algorithm, written by Getreuer \cite{Getreuer2012}, and improve this version using Open MPI.
+    \noindent\textbf{[March 15]} \newline 
+    This paper studies parallel algorithm for active contour model proposed by Chan and Vese \cite{Chan2001} (Chapter \ref{chap:chan}). The purpose is to segment regions of image by minimizing Mumford-Shah model. The paper studies serial algorithm, written by Getreuer \cite{Getreuer2012} (Chapter \ref{chap:serial}), and improve this version using OpenMPI.
+    \newline \newline
+    \textbf{[April 15]} \newline
+    The implementation in OpenMPI is described (Chapter \ref{chap:paralel}). The program works with an arbitrary number of processes, and it recommends the optimal number of processes. The image domain is discretized to grid block.
+    \newline \newline
+    \textbf{[Next]} \newline
+    Profile and tuning
 \end{abstract}
 \vfill
 
 \end{center}
 
 
+
+
 %\newpage
 %\input{summary.tex}
 %\newpage
-%\tableofcontents
+\tableofcontents
 %\newpage
 %\listoffigures
 %\newpage
 %%%%%%%%%%%%%%%%%%%% Start text inputs
 \input{chan-vese-intro.tex}
+\chapter{Parallel active contour}
+\label{chap:paralel}
 \input{implementation.tex}
 \input{tunning.tex}
 \input{conclusion.tex}
@@ -153,9 +169,9 @@
 \bibliography{citation}
 
 %%%%%%%%%%%%%%%%%%% Start appendix
-%\newpage
-%\appendix
-%\input{appendix.tex}
+\newpage
+\appendix
+\input{appendix.tex}
 
 %%%%%%%%%%%%%%%%%%% End
 \end{document}

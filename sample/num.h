@@ -17,6 +17,8 @@
 #ifndef _NUM_H_
 #define _NUM_H_
 
+#define NUM_SINGLE
+
 #ifdef NUM_SINGLE
 /* Use single-precision datatype */
 typedef float num;

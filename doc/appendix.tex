@@ -1,0 +1,143 @@
+\chapter{Code}
+
+Some defined types:
+
+\newcommand{\ck}[1]{\textcolor{blue}{#1}}
+\begin{itemize}
+    \item \ck{num}: \ck{float} or \ck{double} (Depend of precision).
+\end{itemize}
+
+\section{Region average}
+\label{apdx:regionAverage}
+\begin{lstlisting}[caption=Region average]
+void region_average(num *c1, num *c2){
+    num sum1 = 0.0, sum2 = 0.0;
+    long count1 = 0, count2 = 0;
+    
+    for (int x = 0; x < g.active_size_x; x++) {
+        for (int y = 0; y < g.active_size_y; y++) {
+            if (get_phi_data(x, y) >= 0) {
+                count1++;
+                sum1 += get_sub_image_data(x, y);
+            }else{
+                count2++;
+                sum2 += get_sub_image_data(x, y);
+            }
+        }
+    }
+    
+    num total_sum1 = 0.0, total_sum2 = 0.0;
+    long total_count1 = 0, total_count2 = 0;
+    
+    MPI_Allreduce(&sum1, &total_sum1, 1, 
+                    MPI_NUM, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&sum2, &total_sum2, 1, 
+                    MPI_NUM, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&count1, &total_count1, 1, 
+                    MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&count2, &total_count2, 1, 
+                    MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    
+    *c1 = total_sum1 / (num)total_count1;
+    *c2 = total_sum2 / (num)total_count2;
+}
+\end{lstlisting}
+
+\section{Gathering level set function}
+\label{apdx:gatherphi}
+\begin{lstlisting}[caption=Gather phi]
+void gather_phi(){
+    num * main_domain = malloc(...);
+    for (int i = 0; i < active_size_y; i++) {
+        memcpy(main_domain + i*block_size <- 
+                -- phi  + local_array_idx(0, i));
+    }
+    
+    if (rank != main_proc) { // Send
+        MPI_Send(main_domain,
+                block_size * block_size,
+                MPI_NUM,
+                main_proc,
+                GATHER_PHI,
+                MPI_COMM_WORLD);
+    } /* if (rank != main_proc) */
+    
+    if (rank == main_proc) { // receive
+        num * phi_total = malloc(...);
+        for (int blx = 0; blx < bl_dim_x; blx ++) {
+            for (int bly = 0; bly < bl_dim_y; bly++) {
+                int idx = bly*bl_dim_x + blx;
+                num * receive_domain = malloc(size);
+                
+                if (idx == main_proc) {
+                    memcpy(receive_domain <- main_domain);
+                }
+                else{
+                    MPI_Status stat;
+                    MPI_Recv(receive_domain,
+                    block_size * block_size,
+                    MPI_NUM,
+                    idx,
+                    GATHER_PHI,
+                    MPI_COMM_WORLD,
+                    &stat);
+                }
+                
+                // length_y is valid height of the block
+                for (int y = 0; y < length_y; y++) {
+                    int gx = blx*block_size;
+                    int gy = bly*block_size + y;
+                    memcpy(phi_total + gy*image_width+gx,
+                    receive_domain + y*block_size,
+                    length_x*sizeof(num));
+                }
+                
+                free(receive_domain);
+            }
+        }
+    } /* if (rank == main_proc) */
+    
+    free(main_domain);
+}
+\end{lstlisting}
+
+\section{Transfer boundary}
+\label{apdx:tranbound}
+
+\begin{lstlisting}[caption= Transfer boundary]
+void exchange_boundary(){
+    // exchange left boundary with bl_idx_x - 1
+    if (bl_idx_x > 0) {
+        num * left = malloc(block_size*sizeof(num));
+        for (int j = 0; j < block_size; j++) {
+            left[j] = get_phi_data(-1, j);
+        }
+
+        MPI_Send(left,
+                block_size,
+                MPI_NUM,
+                block_idx(bl_idx_x-1, bl_idx_y),
+                EXCHANGE_BOUND,
+                MPI_COMM_WORLD);
+        
+        // Receive
+        MPI_Status stat;
+        num * right_recv = malloc(block_size*sizeof(num));
+        MPI_Recv(right_recv, 
+                 block_size, 
+                 MPI_NUM, 
+                 block_idx(bl_idx_x-1, bl_idx_y),
+                 EXCHANGE_BOUND, 
+                 MPI_COMM_WORLD, 
+                 &stat);
+        for (int j = 0; j < block_size; j++) {
+            set_phi_data(-1, j, right_recv[j]);
+        }
+        
+        free(left);
+        free(right_recv);
+    }
+   
+    /* Do the same for bottom, right and top of the block */
+}
+\end{lstlisting}
