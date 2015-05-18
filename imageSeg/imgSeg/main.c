@@ -38,6 +38,8 @@ image_seg
 	file_path 
 */
 
+// #define TIME_LOG
+
 int main(int argc, char* argv[]){
 
     /*
@@ -132,7 +134,7 @@ int main(int argc, char* argv[]){
    					* g.bl_dim_x*g.bl_dim_y 
    					* g.sub_size * g.sub_size
    					* sizeof(num);
-   		printf("%f %f %f %d# Mem other_time segment_time num thread\n", 
+   		printf("%f %f %f %d # Mem other_time segment_time num thread\n", 
    				mem, other_t, loop_t, g.bl_dim_x*g.bl_dim_y );
    	}
    	

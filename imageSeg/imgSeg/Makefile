@@ -1,5 +1,6 @@
 # All source files
 SRC = $(wildcard *.c)
+HEADER = $(wildcard *.h)
 OBJECT = $(SRC:.c=.o)
 TARGET = image_seg
 
@@ -16,7 +17,7 @@ $(TARGET): $(OBJECT)
 $(OBJECT): $(SRC)
 	$(CXX) $(CXX_FLAGS) -c $(SRC)
 	
-$(SRC): 
+$(SRC): $(HEADER)
 
 .PHONY: clean
 clean: 

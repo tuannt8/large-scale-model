@@ -213,8 +213,8 @@ void region_average(num *c1, num *c2){
     num sum1 = 0.0, sum2 = 0.0;
     long count1 = 0, count2 = 0;
     
-    for (int x = 0; x < g.active_size_x; x++) {
-        for (int y = 0; y < g.active_size_y; y++) {
+    for (int y = 0; y < g.active_size_y; y++) {
+    	for (int x = 0; x < g.active_size_x; x++) {
             if (get_phi_data(x, y) >= 0) {
                 count1++;
                 sum1 += get_sub_image_data(x, y);
@@ -238,6 +238,9 @@ void region_average(num *c1, num *c2){
 }
 
 void update_boundary(){
+	// For the edge process
+	// We copy data from neighbor pixel
+	// For derivation
     if (g.bl_idx_x == 0) {
         for (int y = 0; y < g.active_size_y; y++) {
             set_phi_data(-1, y, get_phi_data(0, y));
@@ -262,28 +265,43 @@ void update_boundary(){
 
 #define EXCHANGE_BOUND 10001
 void exchange_boundary(){
+
+#ifdef DEBUG
+	printf("%d - Exchange bound\n", g.rank);
+#endif
+
 	if(g.rank >= g.bl_dim_x*g.bl_dim_y){
 		return;
 	}
 	
-    if (g.bl_idx_x > 0) {
+    if (g.bl_idx_x > 0) { // LEFT
         // exchange left boundary with g.bl_idx_x - 1
         num * left = malloc(g.block_size*sizeof(num));
         for (int j = 0; j < g.block_size; j++) {
             left[j] = get_phi_data(-1, j);
         }
         
-   //     printf("Left: rank %d to %d \n", g.rank, block_idx(g.bl_idx_x-1, g.bl_idx_y));
+ //       printf("Left: rank %d to %d \n", g.rank, block_idx(g.bl_idx_x-1, g.bl_idx_y));
         
         // Send
-        MPI_Send(left,
+//        MPI_Send(left,
+//                 g.block_size,
+//                 MPI_NUM,
+//                 block_idx(g.bl_idx_x-1, g.bl_idx_y),
+//                 EXCHANGE_BOUND,
+//                 MPI_COMM_WORLD);
+       
+       	MPI_Request req;
+        MPI_Isend(left,
                  g.block_size,
                  MPI_NUM,
                  block_idx(g.bl_idx_x-1, g.bl_idx_y),
                  EXCHANGE_BOUND,
-                 MPI_COMM_WORLD);
+                 MPI_COMM_WORLD,
+                 &req);
         
 
+ //       printf("Left: rank %d to %d ; start receive\n", g.rank, block_idx(g.bl_idx_x-1, g.bl_idx_y));
         
         // Receive
         MPI_Status stat;
@@ -297,21 +315,31 @@ void exchange_boundary(){
         free(left);
         free(right_recv);
     }
-    if (g.bl_idx_x < (g.bl_dim_x-1)) {
+    if (g.bl_idx_x < (g.bl_dim_x-1)) { // RIGHT
         // Exchange right boundary with g.bl_idx_x  + 1
         num * right = malloc(g.block_size*sizeof(num));
         for (int j = 0; j < g.block_size; j++) {
             right[j] = get_phi_data(g.block_size, j);
         }
         // Send
-       // printf("Right: rank %d to %d \n", g.rank, block_idx(g.bl_idx_x+1, g.bl_idx_y));
-        MPI_Send(right,
+ //       printf("Right: rank %d to %d \n", g.rank, block_idx(g.bl_idx_x+1, g.bl_idx_y));
+//        MPI_Send(right,
+//                 g.block_size,
+//                 MPI_NUM,
+//                 block_idx(g.bl_idx_x+1, g.bl_idx_y),
+//                 EXCHANGE_BOUND,
+//                 MPI_COMM_WORLD);
+        MPI_Request req;         
+        MPI_Isend(right,
                  g.block_size,
                  MPI_NUM,
                  block_idx(g.bl_idx_x+1, g.bl_idx_y),
                  EXCHANGE_BOUND,
-                 MPI_COMM_WORLD);
-        
+                 MPI_COMM_WORLD,
+                 &req);
+                                  
+  //      printf("Right: rank %d to %d ; start revceive\n", g.rank, block_idx(g.bl_idx_x+1, g.bl_idx_y));
+ 
         // Receive
         MPI_Status stat;
         num *left_recv = malloc(g.block_size*sizeof(num));
@@ -328,12 +356,19 @@ void exchange_boundary(){
         free(right);
         free(left_recv);
     }
-    if (g.bl_idx_y < (g.bl_dim_y-1)) {
+    if (g.bl_idx_y < (g.bl_dim_y-1)) { // BOTTOM
         // Exchange bottom boundary with g.bl_idx_y+1
         
-        MPI_Send(g.phi+local_array_idx(g.bl_idx_x, g.bl_idx_y+1), g.block_size, MPI_NUM,
-                 block_idx(g.bl_idx_x, g.bl_idx_y+1), EXCHANGE_BOUND, MPI_COMM_WORLD);
+//        MPI_Send(g.phi+local_array_idx(g.bl_idx_x, g.bl_idx_y+1), g.block_size, MPI_NUM,
+//                 block_idx(g.bl_idx_x, g.bl_idx_y+1), EXCHANGE_BOUND, MPI_COMM_WORLD);
         
+        MPI_Request req; 
+        MPI_Isend(g.phi+local_array_idx(g.bl_idx_x, g.bl_idx_y+1), 
+        			g.block_size, MPI_NUM,
+                 block_idx(g.bl_idx_x, g.bl_idx_y+1), 
+                 EXCHANGE_BOUND, MPI_COMM_WORLD,
+                 &req);
+               
         num* top_recv = malloc(g.block_size*sizeof(num));
         MPI_Status stat;
         MPI_Recv(top_recv, g.block_size, MPI_NUM,
@@ -342,11 +377,17 @@ void exchange_boundary(){
             set_phi_data(i, g.block_size, top_recv[i]);
         }
         free(top_recv);
-    }
-    if (g.bl_idx_y > 0) {
+    } 
+    if (g.bl_idx_y > 0) { // TOP
         // Exchagne top boundary with g.bl_idx_y-1
-        MPI_Send(g.phi+1, g.block_size, MPI_NUM,
-                 block_idx(g.bl_idx_x, g.bl_idx_y-1), EXCHANGE_BOUND, MPI_COMM_WORLD);
+//        MPI_Send(g.phi+1, g.block_size, MPI_NUM,
+//                 block_idx(g.bl_idx_x, g.bl_idx_y-1), EXCHANGE_BOUND, MPI_COMM_WORLD);
+        
+        MPI_Request req; 
+        MPI_Isend(g.phi+1, g.block_size, MPI_NUM,
+                 block_idx(g.bl_idx_x, g.bl_idx_y-1), EXCHANGE_BOUND, 
+                 MPI_COMM_WORLD, &req);
+               
         
         num* bottom_recv = malloc(g.block_size*sizeof(num));
         MPI_Status stat;
@@ -389,6 +430,8 @@ void chan_vese_loop(){
     PhiDiffNorm = (PhiTol > 0) ? PhiTol*1000 : 1000;
     
     int count = 0;
+    num compute_time = 0.0;
+    num commute_time = 0.0;
     while (1) {
         // Update level set function
         
@@ -448,10 +491,16 @@ void chan_vese_loop(){
             }
         }
         
+        MPI_Barrier(MPI_COMM_WORLD);
+        
+      //  printf("(%d) finish main loop %d\n", g.rank, count);
+        
         // Error
         num total_e2 = 0.0;
         MPI_Allreduce(&PhiDiffNorm, &total_e2, 1, MPI_NUM, MPI_SUM, MPI_COMM_WORLD);
         total_e2 = sqrt(total_e2/NumEl);
+
+	//	printf("(%d) finish Allreduce loop %d \n", g.rank, count);
 
 #ifdef DEBUG        
         LOG("Iter: %d - error: %f \n", count, total_e2);
@@ -460,107 +509,14 @@ void chan_vese_loop(){
         // Exchange boundary
         exchange_boundary();
 //        gather_phi_p(count);
+
+		MPI_Barrier(MPI_COMM_WORLD);
         
         count++;
         
         if (count > g.opt.max_iter
             || total_e2 <= PhiTol
             ) {
-            break;
-        }
-    }
-}
-
-void chan_vese_loop_bk_1(){
-    
-    // Region average
-    num c1, c2;
-    // Temp var
-    num delta, cur_phi, cur_f;
-    num Aij, Ai_minus1_j, Bij, Bij_minus1;
-    num grad_phi_x, grad_phi_y;
-    num d_phi;
-    num error2;
-    
-    num * new_phi = malloc(g.sub_size*g.sub_size*sizeof(num));
-    memcpy(new_phi, g.phi, g.sub_size*g.sub_size*sizeof(num));
-    
-    int count = 0;
-    while (1) {
-        // Update level set function
-        
-        region_average(&c1, &c2);
-        update_boundary();
-        
-        error2 = 0.0;
-        
-        for (int x = 0; x < g.active_size_x; x++) {
-            for (int y = 0; y < g.active_size_y ; y++) {
-                cur_phi =get_phi_data(x, y);
-                cur_f = get_sub_image_data(x, y);
-                
-                // Delta
-                delta = g.opt.dt/(M_PI*(1 + cur_phi*cur_phi));
-                
-                // A(i, j)
-                grad_phi_x = get_phi_data(x+1, y) - get_phi_data(x, y);
-                grad_phi_y = 1./2. * (get_phi_data(x, y+1) - get_phi_data(x, y-1));
-                Aij = g.opt.mu / sqrt(DIVIDE_EPS + grad_phi_x*grad_phi_x + grad_phi_y*grad_phi_y);
-                
-                // A(i-1,j)
-                grad_phi_x = get_phi_data(x, y) - get_phi_data(x-1, y);
-                grad_phi_y = 1./2. * (get_phi_data(x-1, y+1) - get_phi_data(x-1, y-1));
-                Ai_minus1_j = g.opt.mu / sqrt(DIVIDE_EPS + grad_phi_x*grad_phi_x + grad_phi_y*grad_phi_y);
-                
-                // B(i,j)
-                grad_phi_x = 1./2. * (get_phi_data(x+1, y) - get_phi_data(x-1, y));
-                grad_phi_y = get_phi_data(x, y+1) - get_phi_data(x, y);
-                Bij = g.opt.nu / sqrt(DIVIDE_EPS + grad_phi_x*grad_phi_x + grad_phi_y*grad_phi_y);
-                
-                // B(i, j-1)
-                grad_phi_x = 1./2. * (get_phi_data(x+1, y-1) - get_phi_data(x-1, y-1));
-                grad_phi_y = get_phi_data(x, y) - get_phi_data(x, y-1);
-                Bij_minus1 = g.opt.nu / sqrt(DIVIDE_EPS + grad_phi_x*grad_phi_x + grad_phi_y*grad_phi_y);
-                
-                // d phi/dt
-                num f_in = get_sub_image_data(x, y) - c1;
-                num f_out = get_sub_image_data(x, y) - c2;
-                
-                d_phi = delta * (Aij*(get_phi_data(x+1, y) - get_phi_data(x, y))
-                                 - Ai_minus1_j*(get_phi_data(x, y) - get_phi_data(x, y-1))
-                                 + Bij*(get_phi_data(x, y+1) - get_phi_data(x, y))
-                                 - Bij_minus1 * (get_phi_data(x, y) - get_phi_data(x, y-1))
-                                 - g.opt.nu
-                                 - g.opt.lamda1*f_in*f_in
-                                 + g.opt.lamda2*f_out*f_out
-                                 );
-                
-                new_phi[local_array_idx(x, y)] = get_phi_data(x, y) + d_phi*g.opt.dt;
-                
-                error2 += d_phi*g.opt.dt * d_phi*g.opt.dt;
-            }
-        }
-        
-        // Swap
-        num * temp = new_phi;
-        new_phi = g.phi;
-        g.phi = temp;
-        
-        // Error
-        num total_e2 = 0.0;
-        MPI_Allreduce(&error2, &total_e2, 1, MPI_NUM, MPI_SUM, MPI_COMM_WORLD);
-        total_e2 /= (g.image_width * g.image_height);
-        
-#ifdef DEBUG
-        LOG("Iter: %d - error: %f - delta: %f \n", count, total_e2,
-            total_e2/g.image_width/g.image_height);
-        
-        
-#endif /* DEBUG */
-        
-        count++;
-        if (count > g.opt.max_iter
-            || total_e2 <= g.opt.phi_tol) {
             break;
         }
     }

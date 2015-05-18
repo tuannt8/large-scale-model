@@ -1,8 +1,8 @@
 #!/bin/bash
 # we should be done within one hour
-#PBS -l walltime=2:00:00
+#PBS -l walltime=00:1:00
 # the number of cores we need (use procs=N, or nodes=A:ppn=B, with N=A*B)
-#PBS -l procs=100
+#PBS -l procs=64
 #PBS -q hpc
 #PBS -e exec.err
 #PBS -o exec.out
@@ -12,8 +12,8 @@
 # change into work directory
 cd $PBS_O_WORKDIR
 
-size="100 200 500 800 1000 1500 2000 3000 4000"
-thread="1 4 8 12 16 20 24 30 40 60 100"
+size="4000"
+thread="1 4 9 16 25 36 49 64"
 
 module load mpi/gcc
 
@@ -24,6 +24,6 @@ for t in $thread
 do
 	for s in $size
 	do
-		mpirun -n $t image_seg -file Data/gray.bmp -iters 400 -size $s >> "LOG/$OUT"
+		mpirun -n $t image_seg -file Data/gray.bmp -iters 100 -size $s >> "LOG/$OUT"
 	done
 done
