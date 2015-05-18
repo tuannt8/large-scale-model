@@ -37,11 +37,19 @@ typedef double num;
 
 // LOG(char*)
 // Log by main proc
+#ifdef DEBUG
 #define LOG(a, ...)     if(g.rank == g.main_proc){ \
 printf(a, ##__VA_ARGS__); \
 }
 
 #define LOG_LINE LOG("====================================\n");
+
+#else
+#define LOG(a, ...)
+#define LOG_LINE
+#endif
+
+
 
 // LOG_ALL(char*)               |
 //-------------------------------

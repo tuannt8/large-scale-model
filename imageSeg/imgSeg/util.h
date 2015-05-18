@@ -27,10 +27,15 @@
 #define BOUNDARY_TRANSFER 100
 #define GATHER_PHI 101
 
+#define GAP_SIZE 20 // pixel
+
 typedef struct{
     int x;
     int y;
 }vec2;
+
+
+void print_help();
 
 /*
  Local index: (-1, -1) -> (sub_size, sub_size)
@@ -72,6 +77,8 @@ typedef struct {
     num* phi;
     chan_vese_opt opt;
     
+	int img_size;
+    
     // Input informtaion
     // Image path
     char file_path[MAX_LEN_S_T];
@@ -82,16 +89,21 @@ extern global_info g;
 
 /////////////////////////////////////////////////
 // Parser argument
-void parse_arguments(int argc, char* argv[]);
+int parse_arguments(int argc, char* argv[]);
 
 /////////////////////////////////////////////////
 // Read image data
+void generate_image();
 int read_data();
+
+int log_local_phi();
+int log_local_image();
 
 /////////////////////////////////////////////////
 // Init level set function
 int init_phi();
 void gather_phi();
+void gather_phi_p(int iter);
 
 /////////////////////////////////////////////////
 void chan_vese_loop();
@@ -115,8 +127,9 @@ extern inline void set_sub_image_data(int x, int y, int inten);
 extern inline num get_phi_data(int x, int y);
 extern inline void set_phi_data(int x, int y, int inten);
 
-extern inline int local_array_idx(int x, int y);
-vec2 global_idx_convert(vec2 local);
+// local (-1 -> block) -> index
+extern inline int local_array_idx(int x, int y); 
+// vec2 global_idx_convert(vec2 local);
 
 int block_idx(int x, int y);
 

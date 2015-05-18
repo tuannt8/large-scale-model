@@ -16,48 +16,70 @@ int read_data(){
     //
      1. Find optimal block size
      */
-    int width, height;
-    if(!ReadImageSize_BMP(&width, &height, g.file_path)){
-        LOG("==== Failed to read header BMP file");
-        goto Catch;
+//    LOG("Start reading image data \n");
+    
+    if(g.rank == g.main_proc){
+ 
+		int width, height;
+		if(!ReadImageSize_BMP(&width, &height, g.file_path)){
+		    LOG("==== Failed to read header BMP file");
+		    goto Catch;
+		} 
+		
+		// Find optimal block size
+		int nb_proc_aray_x[MAX_DIM_PROCS_ARRAY] = {1};
+		int nb_proc_aray_y[MAX_DIM_PROCS_ARRAY] = {1};
+		int block_size[MAX_DIM_PROCS_ARRAY] = {max_(width, height)};
+		
+		int length = 1;
+		while (length < MAX_DIM_PROCS_ARRAY) {
+		    int x,y, s;
+		    if (width > height) {
+		        y = length + 1;
+		        x = ceil(y * width/(num)height);
+		        s = ceil((num)height / (num)y);
+		    }else{
+		        x = length + 1;
+		        y = ceil(x * (num)height/width);
+		        s = ceil((num)width / (num)x);
+		    }
+		    nb_proc_aray_x[length] = x;
+		    nb_proc_aray_y[length] = y;
+		    block_size[length] = s;
+		    
+		    length++;
+		    if (x*y > g.size) {
+		        break;
+		    }
+		}
+		
+		g.image_width = width;
+		g.image_height = height;
+		g.bl_dim_x = nb_proc_aray_x[length - 2];
+		g.bl_dim_y = nb_proc_aray_y[length - 2];
+		g.block_size = block_size[length - 2];
+
+		
+		    int num_proc = g.bl_dim_x * g.bl_dim_y;
+    
+		LOG("Image: [%d x %d]\n", g.image_width, g.image_height);
+		LOG("(%d)Number of procs. (with optimal) %d x %d= %d ~ %d \n", g.rank,
+		           g.bl_dim_x, g.bl_dim_y, num_proc, g.size);
+		LOG("Next should be: %d = [%d x %d]\n", nb_proc_aray_x[length-1]*nb_proc_aray_y[length-1],
+		    nb_proc_aray_x[length-1], nb_proc_aray_y[length-1]);
+		LOG("Proc size: %d x %d\n", g.block_size, g.block_size);
+		LOG_LINE
     }
     
-    
-    
-    int nb_proc_aray_x[MAX_DIM_PROCS_ARRAY] = {1};
-    int nb_proc_aray_y[MAX_DIM_PROCS_ARRAY] = {1};
-    int block_size[MAX_DIM_PROCS_ARRAY] = {max_(width, height)};
-    
-    int length = 1;
-    while (length < MAX_DIM_PROCS_ARRAY) {
-        int x,y, s;
-        if (width > height) {
-            y = length + 1;
-            x = ceil(y * width/(num)height);
-            s = ceil((num)height / (num)y);
-        }else{
-            x = length + 1;
-            y = ceil(x * (num)height/width);
-            s = ceil((num)width / (num)x);
-        }
-        nb_proc_aray_x[length] = x;
-        nb_proc_aray_y[length] = y;
-        block_size[length] = s;
-        
-        length++;
-        if (x*y > g.size) {
-            break;
-        }
-    }
-    
-    g.image_width = width;
-    g.image_height = height;
-    g.bl_dim_x = nb_proc_aray_x[length - 2];
-    g.bl_dim_y = nb_proc_aray_y[length - 2];
-    g.block_size = block_size[length - 2];
+    MPI_Bcast(&g.image_width, 1, MPI_INT, g.main_proc, MPI_COMM_WORLD);
+    MPI_Bcast(&g.image_height, 1, MPI_INT, g.main_proc, MPI_COMM_WORLD);
+    MPI_Bcast(&g.bl_dim_x, 1, MPI_INT, g.main_proc, MPI_COMM_WORLD);
+    MPI_Bcast(&g.bl_dim_y, 1, MPI_INT, g.main_proc, MPI_COMM_WORLD);
+    MPI_Bcast(&g.block_size, 1, MPI_INT, g.main_proc, MPI_COMM_WORLD);
+
     g.bl_idx_x = g.rank % g.bl_dim_x;
-    g.bl_idx_y = g.rank / g.bl_dim_x;
-    g.sub_size = g.block_size + 2;
+	g.bl_idx_y = g.rank / g.bl_dim_x;
+	g.sub_size = g.block_size + 2;
     
     int length_y, length_x;
     if (g.bl_idx_x < g.bl_dim_x - 1) {
@@ -73,50 +95,80 @@ int read_data(){
     g.active_size_x = length_x;
     g.active_size_y = length_y;
     
-    
-    
-    int num_proc = g.bl_dim_x * g.bl_dim_y;
-    
-    LOG("Image: [%d x %d]\n", width, height);
-    LOG("Number of procs. (with optimal) %d x %d= %d ~ %d \n",
-               g.bl_dim_x, g.bl_dim_y, num_proc, g.size);
-    LOG("Next should be: %d = [%d x %d]\n", nb_proc_aray_x[length-1]*nb_proc_aray_y[length-1],
-        nb_proc_aray_x[length-1], nb_proc_aray_y[length-1]);
-    LOG("Proc size: %d x %d\n", g.block_size, g.block_size);
-    LOG_LINE
-    
     // 2. Load partial image
     // TODO: Optimize later. Now load all image
     image orignal;
-    if(!ReadImageObjGrayscale(&orignal, g.file_path)){
+    if(ReadImageObjGrayscale(&orignal, g.file_path) == 0){
         LOG("===Failed to read image data");
         goto Catch;
     }
-    
-    
+        
     num *partial_data = malloc(g.sub_size * g.sub_size * sizeof(num));
     for (int y = -1; y < g.sub_size -1; y++) {
         for(int x = -1; x < g.sub_size -1; x++){
             vec2 local = {x, y}, global ={0,0};
+            
             if (get_global_pixel_index(local, &global))
             {
-                partial_data[local.y * g.sub_size + local.x] =
+                partial_data[local_array_idx(x, y)] =
                     orignal.Data[global.y * g.image_width + global.x];
             }
-            else
-                partial_data[local.y * g.sub_size + local.x] = 0.;
+            else 
+            {
+                partial_data[local_array_idx(x, y)] = 0.;
+     		}
         }
     }
+  
     
     g.sub_image = partial_data;
     
     FreeImageObj(orignal);
 
-    return 1;
+    LOG("Read data successfully \n");
+    return 0;
+    
+
     
 Catch:
-    return 0;
+	LOG("Failed in reading image \n");
+    return 1;
 };
+
+int log_local_phi(){
+	// Write
+    image img_;
+    img_.Data = g.phi;
+    img_.Height = g.sub_size;
+    img_.Width = g.sub_size;
+    img_.NumChannels = 1;
+    char name[MAX_LEN_S_T];
+    sprintf(name, "LOG/phi_%d.bmp", g.rank);
+    
+    printf("Write to %s \n", name);
+    
+
+    int s = WriteImage(img_.Data, img_.Width, img_.Height, name,
+                         IMAGEIO_NUM | IMAGEIO_GRAYSCALE | IMAGEIO_PLANAR, 1);
+   	if(s == 0 )
+   		printf("Error writing %s\n", name);
+	return s;
+}
+
+int log_local_image(){
+
+    char name[MAX_LEN_S_T];
+    sprintf(name, "LOG/img_%d.bmp", g.rank);
+    
+    printf("Write to %s \n", name);
+    
+
+    int s = WriteImage(g.sub_image, g.sub_size, g.sub_size, name,
+                         IMAGEIO_NUM | IMAGEIO_GRAYSCALE | IMAGEIO_PLANAR, 1);
+   	if(s == 0 ) // error
+   		printf("Error writing %s\n", name);
+	return s;
+}
 
 void debug_print(){
 
@@ -144,15 +196,17 @@ int init_phi(){
                     (num)(sin(global.x*M_PI/5.0)*sin(global.y*M_PI/5.0));
             }
             else
-                phi_data[local.y * g.sub_size + local.x] = 0.;
+                phi_data[local_array_idx(x, y)] = 0.;
         }
     }
     
     g.phi = phi_data;
     
-    return 1;
+    LOG("Init phi success \n");
+    return 0; // sucess
+    
 catch:
-    return 0;
+    return 1;
 }
 
 void region_average(num *c1, num *c2){
@@ -208,6 +262,10 @@ void update_boundary(){
 
 #define EXCHANGE_BOUND 10001
 void exchange_boundary(){
+	if(g.rank >= g.bl_dim_x*g.bl_dim_y){
+		return;
+	}
+	
     if (g.bl_idx_x > 0) {
         // exchange left boundary with g.bl_idx_x - 1
         num * left = malloc(g.block_size*sizeof(num));
@@ -394,15 +452,17 @@ void chan_vese_loop(){
         num total_e2 = 0.0;
         MPI_Allreduce(&PhiDiffNorm, &total_e2, 1, MPI_NUM, MPI_SUM, MPI_COMM_WORLD);
         total_e2 = sqrt(total_e2/NumEl);
-        
-#ifdef DEBUG
+
+#ifdef DEBUG        
         LOG("Iter: %d - error: %f \n", count, total_e2);
-#endif /* DEBUG */
+#endif
         
         // Exchange boundary
         exchange_boundary();
+//        gather_phi_p(count);
         
         count++;
+        
         if (count > g.opt.max_iter
             || total_e2 <= PhiTol
             ) {
@@ -526,16 +586,36 @@ int WriteBinary(image Phi, const char *File)
     return Success;
 }
 
-
-void gather_phi(){
+void gather_phi_p(int iter){
     num * main_domain = malloc(g.block_size * g.block_size * sizeof(num));
+    
+    // Copy main main part to main_domain
     for (int i = 0; i < g.active_size_y; i++) {
-        memcpy(main_domain + i*g.block_size,
-               g.phi  + local_array_idx(0, i) ,
-               g.active_size_x*sizeof(num));
+        memcpy(main_domain + i*g.block_size,		// Dest
+               g.phi  + local_array_idx(0, i) ,		// Source
+               g.active_size_x*sizeof(num));		// Size
     }
     
-    if (g.rank != g.main_proc) { // Send
+    if (g.size == 1) // Only one proc
+    {
+    	// Write
+        image phi_;
+        phi_.Data = main_domain;
+        phi_.Height = g.image_height;
+        phi_.Width = g.image_width;
+        phi_.NumChannels = 1;
+        char name[MAX_LEN_S_T];
+        sprintf(name, "LOG/phi_%d.bmp", iter);
+        
+        WriteBinary(phi_, name);
+        LOG("Level set function written to LOG/phi.bmp\n");
+        
+        free(main_domain);
+    	return;
+    }
+    
+    if (g.rank != g.main_proc) { 
+    // Send domain part from all to main proc
         MPI_Send(main_domain,
                  g.block_size * g.block_size,
                  MPI_NUM,
@@ -543,8 +623,7 @@ void gather_phi(){
                  GATHER_PHI,
                  MPI_COMM_WORLD);
     }
-    
-    if (g.rank == g.main_proc) { // receive
+    else { // receive
         num * phi_total = malloc(g.image_width*g.image_height*sizeof(num));
         for (int blx = 0; blx < g.bl_dim_x; blx ++) {
             for (int bly = 0; bly < g.bl_dim_y; bly++) {
@@ -601,9 +680,10 @@ void gather_phi(){
         phi_.Width = g.image_width;
         phi_.NumChannels = 1;
         char name[MAX_LEN_S_T];
-        sprintf(name, "LOG/phi.bmp");
+        sprintf(name, "LOG/phi_%d.bmp", iter);
         
         WriteBinary(phi_, name);
+        LOG("Level set function written to LOG/phi.bmp\n");
 
         free(phi_total);
     } /* if (g.rank == g.main_proc) */
@@ -611,16 +691,140 @@ void gather_phi(){
     free(main_domain);
 }
 
+void gather_phi(){
+	
+
+    num * main_domain = malloc(g.block_size * g.block_size * sizeof(num));
+    
+    // Copy main main part to main_domain
+    for (int i = 0; i < g.active_size_y; i++) {
+        memcpy(main_domain + i*g.block_size,		// Dest
+               g.phi  + local_array_idx(0, i) ,		// Source
+               g.active_size_x*sizeof(num));		// Size
+    }
+    
+/*    if (g.size == 1) // Only one proc
+    {
+    	// Write
+        image phi_;
+        phi_.Data = main_domain;
+        phi_.Height = g.image_height;
+        phi_.Width = g.image_width;
+        phi_.NumChannels = 1;
+        char name[MAX_LEN_S_T];
+        sprintf(name, "LOG/phi.bmp");
+        
+        WriteBinary(phi_, name);
+        LOG("Level set function written to LOG/phi.bmp\n");
+        
+        free(main_domain);
+    	return;
+    }*/
+    
+ //   printf("gather phi in %d\n", g.rank);
+    
+//	printf("Block dimension: [%d %d]\n", g.bl_dim_x, g.bl_dim_y);
+    
+    if(g.rank == g.main_proc) 
+    { // receive
+    
+        num * phi_total = malloc(g.image_width*g.image_height*sizeof(num));
+        for (int blx = 0; blx < g.bl_dim_x; blx ++) {
+            for (int bly = 0; bly < g.bl_dim_y; bly++) {
+                int idx = bly*g.bl_dim_x + blx;
+                num * receive_domain = malloc(g.block_size * g.block_size * sizeof(num));
+                
+                
+                
+                if (idx == g.main_proc) {
+                    memcpy(receive_domain, main_domain, g.block_size * g.block_size * sizeof(num));
+                }
+                else
+                {
+                    MPI_Status stat;
+             //       printf("reive phi from %d / %d \n", idx, g.size);
+                    
+                    MPI_Recv(receive_domain,
+                             g.block_size * g.block_size,
+                             MPI_NUM,
+                             idx,
+                             GATHER_PHI,
+                             MPI_COMM_WORLD,
+                             &stat);
+                    
+                }
+                
+                // Copy
+                int length_y, length_x;
+                if (blx < g.bl_dim_x - 1) {
+                    length_x = g.block_size;
+                }else
+                    length_x = g.image_width - (g.bl_dim_x-1)*g.block_size;
+                
+                if(bly < g.bl_dim_y - 1)
+                    length_y = g.block_size;
+                else
+                    length_y = g.image_height - (g.bl_dim_y-1)*g.block_size;
+                
+                for (int y = 0; y < length_y; y++) {
+                    int gx = blx*g.block_size;
+                    int gy = bly*g.block_size + y;
+                    memcpy(phi_total + gy*g.image_width+gx,
+                           receive_domain + y*g.block_size,
+                           length_x*sizeof(num));
+                }
+                
+                free(receive_domain);
+                
+            }
+            
+            
+        }
+        
+        // Write
+        image phi_;
+        phi_.Data = phi_total;
+        phi_.Height = g.image_height;
+        phi_.Width = g.image_width;
+        phi_.NumChannels = 1;
+        char name[MAX_LEN_S_T];
+        sprintf(name, "LOG/phi.bmp");
+        
+        WriteBinary(phi_, name);
+        LOG("Level set function written to LOG/phi.bmp\n");
+
+        free(phi_total);
+    } /* if (g.rank == g.main_proc) */
+    
+    if (g.rank != g.main_proc 
+    	&& g.rank < g.bl_dim_x*g.bl_dim_y) 
+    { 
+    // Send domain part from all to main proc
+    //	printf("Send phi from %d \n", g.rank);
+    	
+        MPI_Send(main_domain,
+                 g.block_size * g.block_size,
+                 MPI_NUM,
+                 g.main_proc,
+                 GATHER_PHI,
+                 MPI_COMM_WORLD);
+        
+    }
+    
+    free(main_domain);
+}
+
 int get_global_pixel_index(vec2 const local, vec2 *global){
+	
     global->x = g.bl_idx_x * g.block_size + local.x;
     global->y = g.bl_idx_y * g.block_size + local.y;
     
     if (global->x >= g.image_width || global->x < 0
         || global->y >= g.image_height || global->y < 0) {
-        return 0;
+        return 0; // Fail
     }
     
-    return 1;
+    return 1; // success
 }
 void print_g(){
     printf("Proc: %d / %d \n", g.rank, g.size);
@@ -640,8 +844,71 @@ int max_(int a, int b){return a>b? a:b;};
 
 /////////////////////////////////////////////////
 // Parser argument
-void parse_arguments(int argc, char* argv[]){
-    strcpy(g.file_path, argv[1]);
+#define FILE_OPTION "-file"
+#define MAX_ITER 	"-iters"
+#define IMG_SIZE	"-size"
+
+void print_help(){
+	if(g.rank == g.main_proc){
+		printf("ARGUMENTS: \n");
+		printf(" %s []: image file \n", FILE_OPTION);
+		printf(" %s	[]: Max iteration \n", MAX_ITER);
+		printf(" %s	[]: Image size \n", IMG_SIZE);
+	}
+}
+
+int parse_arguments(int argc, char* argv[]){
+	if(argc < 2)
+		return 1;
+		
+	int k = 1;
+	while( k < argc){
+		char* option = argv[k];
+		if(k + 1 > argc) return 1;
+		char* value = argv[k+1]; // Should checlk also
+		
+		
+		
+		if(strcmp(option, FILE_OPTION) == 0){
+			strcpy(g.file_path, value);
+		}
+		else if(strcmp(option, MAX_ITER) == 0){
+			g.opt.max_iter = atoi(value);
+		}
+		else if (strcmp(option, IMG_SIZE) == 0){
+			g.img_size = atoi(value);
+		}
+		else{
+			LOG("Wrong input: %s \n", option);
+			return 1;
+		}
+		
+		k+=2;
+	}
+   	return 0;
+}
+
+void generate_image(){
+	strcpy(g.file_path, "LOG/dummy.bmp");
+	if(g.rank == g.main_proc){
+		num * data = malloc(g.img_size * g.img_size * sizeof(num));
+		num center = g.img_size/2;
+		num radius2 = g.img_size / 4; radius2 = radius2 * radius2;
+		for(int i = 0; i < g.img_size; i++){
+			for(int j = 0; j < g.img_size; j++){
+				if((i-center)*(i-center) + (j-center)*(j-center) < radius2){
+					data[i * g.img_size + j] = 1.0;
+				}else{
+					data[i * g.img_size + j] = 0.0;
+				}
+			}
+		}
+	
+		WriteImage(data, g.img_size, g.img_size, g.file_path,
+		                     IMAGEIO_NUM | IMAGEIO_GRAYSCALE | IMAGEIO_PLANAR, 1);
+		LOG("Dummy image generated: %s\n", g.file_path);
+    
+    }	
 }
 
 /////////////////////////////////////////////////
