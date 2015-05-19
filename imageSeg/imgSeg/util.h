@@ -113,6 +113,8 @@ void region_average(num *c1, num *c2);
 void update_boundary();
 void exchange_boundary();
 void exchange_boundary_windows();
+void init_window_buffer();
+void delete_window_buffer();
 
 /////////////////////////////////////////////////
 //inline int proc_index(int x, int y);

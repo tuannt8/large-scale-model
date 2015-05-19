@@ -62,7 +62,8 @@ int main(int argc, char* argv[]){
     print_info();
     
     if(g.img_size != 0){
-    	generate_image();
+    	strcpy(g.file_path, "LOG/dummy.bmp");
+//    	generate_image();
     }
     
     num other_t = 0.0, loop_t = 0.0;
@@ -71,7 +72,7 @@ int main(int argc, char* argv[]){
     // 2. Read image
     //    Compute optimal block size and number of procs
     //    Load partial image to each proc
-    MPI_Barrier(MPI_COMM_WORLD);
+//    MPI_Barrier(MPI_COMM_WORLD);
     double t = MPI_Wtime();
     
     if(read_data() != 0)
@@ -84,7 +85,7 @@ int main(int argc, char* argv[]){
    	other_t += t;
    	
    	// Log local image
-  // 	log_local_image();
+   	// log_local_image();
  
     // 3. Init Phi
     MPI_Barrier(MPI_COMM_WORLD);

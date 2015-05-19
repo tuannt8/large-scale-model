@@ -489,6 +489,9 @@ int chan_vese_loop(){
     int count = 0;
     num compute_time = 0.0;
     num commute_time = 0.0;
+    
+    init_window_buffer();
+    
     while (1) {
         // Update level set function
         
@@ -582,8 +585,16 @@ int chan_vese_loop(){
     return count;
 }
 
+static num * buffer;
+
+void init_window_buffer(){
+}
+
+void delete_window_buffer(){
+
+}
+
 void exchange_boundary_windows(){
-//	static inited
 
 }
 
@@ -912,7 +923,7 @@ int parse_arguments(int argc, char* argv[]){
 }
 
 void generate_image(){
-	strcpy(g.file_path, "LOG/dummy.bmp");
+	
 	if(g.rank == g.main_proc){
 		num * data = malloc(g.img_size * g.img_size * sizeof(num));
 		num center = g.img_size/2;

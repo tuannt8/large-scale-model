@@ -7,13 +7,13 @@
 #PBS -e exec.err
 #PBS -o exec.out
 #PBS -M tntr@dtu.dk
-#PBS -m abe
+# PBS -m abe
 
 # change into work directory
 cd $PBS_O_WORKDIR
 
 size="4000"
-thread="1 4 9 16 25 36 49 64"
+thread="64"
 
 module load mpi/gcc
 
@@ -24,6 +24,6 @@ for t in $thread
 do
 	for s in $size
 	do
-		mpirun -n $t image_seg -file Data/gray.bmp -iters 100 -size $s >> "LOG/$OUT"
+		mpirun -n $t image_seg -size $s  -iters 200 >> "LOG/$OUT"
 	done
 done
