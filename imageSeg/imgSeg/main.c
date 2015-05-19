@@ -14,6 +14,7 @@
 #include <stdbool.h>
 
 global_info g;
+MPI_Comm grid_comm;
 
 void init_data(){
     g.main_proc = 0;
@@ -106,24 +107,26 @@ int main(int argc, char* argv[]){
    
     MPI_Barrier(MPI_COMM_WORLD);
     t = MPI_Wtime();
-    
-    chan_vese_loop();
-    
-    MPI_Barrier(MPI_COMM_WORLD);
-    t = MPI_Wtime() - t;
-   	LOG("Main loop: %f sec \n", t);
-   	loop_t += t;
-        
+    int count;
+    if(grid_comm != MPI_COMM_NULL)
+    {
+		count = chan_vese_loop();
+		
+		MPI_Barrier(MPI_COMM_WORLD);
+		t = MPI_Wtime() - t;
+	   	LOG("Main loop: %f sec \n", t);
+	   	loop_t += t;
+    }
     // Gather level set function and log  
 
-    MPI_Barrier(MPI_COMM_WORLD);
+//    MPI_Barrier(MPI_COMM_WORLD);
     t = MPI_Wtime();
     LOG("Start gathering phi\n");  
         
     gather_phi();
     LOG_LINE;
     
-    MPI_Barrier(MPI_COMM_WORLD);
+//    MPI_Barrier(MPI_COMM_WORLD);
     t = MPI_Wtime() - t;
    	LOG("gathering level set time: %f sec \n", t);
    	other_t += t;
@@ -134,8 +137,8 @@ int main(int argc, char* argv[]){
    					* g.bl_dim_x*g.bl_dim_y 
    					* g.sub_size * g.sub_size
    					* sizeof(num);
-   		printf("%f %f %f %d # Mem other_time segment_time num thread\n", 
-   				mem, other_t, loop_t, g.bl_dim_x*g.bl_dim_y );
+   		printf("%f %f %f %d %d # Mem other_time segment_time num_thread iters\n", 
+   				mem, other_t, loop_t, g.bl_dim_x*g.bl_dim_y , count-1);
    	}
    	
   

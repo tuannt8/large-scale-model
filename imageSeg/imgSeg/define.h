@@ -14,7 +14,7 @@
 #define NUM_SINGLE
 
 // Comment for release mode
-//#define DEBUG
+// #define DEBUG
 
 ///////////////////////////////////////////////////////////////
 // GLOBAL VARIABLES

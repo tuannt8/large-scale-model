@@ -77,9 +77,14 @@ int read_data(){
     MPI_Bcast(&g.bl_dim_y, 1, MPI_INT, g.main_proc, MPI_COMM_WORLD);
     MPI_Bcast(&g.block_size, 1, MPI_INT, g.main_proc, MPI_COMM_WORLD);
 
-    g.bl_idx_x = g.rank % g.bl_dim_x;
-	g.bl_idx_y = g.rank / g.bl_dim_x;
+//    g.bl_idx_x = g.rank % g.bl_dim_x;
+//	g.bl_idx_y = g.rank / g.bl_dim_x;
 	g.sub_size = g.block_size + 2;
+	
+	//////////
+	// Create Cartersian communication
+	//////////
+	create_cartersian_comm();
     
     int length_y, length_x;
     if (g.bl_idx_x < g.bl_dim_x - 1) {
@@ -135,39 +140,70 @@ Catch:
     return 1;
 };
 
-int log_local_phi(){
-	// Write
-    image img_;
-    img_.Data = g.phi;
-    img_.Height = g.sub_size;
-    img_.Width = g.sub_size;
-    img_.NumChannels = 1;
-    char name[MAX_LEN_S_T];
-    sprintf(name, "LOG/phi_%d.bmp", g.rank);
-    
-    printf("Write to %s \n", name);
-    
+void create_cartersian_comm(){
+    int dims [ ] = { g.bl_dim_x , g.bl_dim_y } , 
+    				periodic [ ] = { 0 , 0 } , 
+    				reorder = 1 ;
+    int error ;
+    // Create Cart communication
+    error = MPI_Cart_create ( MPI_COMM_WORLD
+                             , 2  // Cartersian grid dimension
+                             , dims // Number of process in each dimension
+                             , periodic // true if first item connect to last item
+                             , reorder // Ranking may be reorder, give the system a chance to optimize
+                             , &grid_comm ) ;
+                             
+   // Set block index
+   if(grid_comm != MPI_COMM_NULL){
+   		int coordinates[2]; int my_grid_rank;
+        int err = MPI_Comm_rank(grid_comm, &my_grid_rank);
+        MPI_Cart_coords( grid_comm, my_grid_rank, 2, coordinates);
+        
+        g.bl_idx_x = coordinates[0];
+        g.bl_idx_y = coordinates[1];
+        
+        g.rank = my_grid_rank;
+   }
+}
 
-    int s = WriteImage(img_.Data, img_.Width, img_.Height, name,
-                         IMAGEIO_NUM | IMAGEIO_GRAYSCALE | IMAGEIO_PLANAR, 1);
-   	if(s == 0 )
-   		printf("Error writing %s\n", name);
-	return s;
+int log_local_phi(){
+	if(grid_comm != MPI_COMM_NULL){
+		// Write
+		image img_;
+		img_.Data = g.phi;
+		img_.Height = g.sub_size;
+		img_.Width = g.sub_size;
+		img_.NumChannels = 1;
+		char name[MAX_LEN_S_T];
+		sprintf(name, "LOG/phi_%d.bmp", g.rank);
+		
+		printf("Write to %s \n", name);
+		
+
+		int s = WriteImage(img_.Data, img_.Width, img_.Height, name,
+		                     IMAGEIO_NUM | IMAGEIO_GRAYSCALE | IMAGEIO_PLANAR, 1);
+	   	if(s == 0 )
+	   		printf("Error writing %s\n", name);
+		return s;
+	}
+	return 1;
 }
 
 int log_local_image(){
+	if(grid_comm != MPI_COMM_NULL){
+		char name[MAX_LEN_S_T];
+		sprintf(name, "LOG/img_%d_%d_%d.bmp", g.rank, g.bl_idx_x, g.bl_idx_y);
+		
+		printf("Write to %s \n", name);
+		
 
-    char name[MAX_LEN_S_T];
-    sprintf(name, "LOG/img_%d.bmp", g.rank);
-    
-    printf("Write to %s \n", name);
-    
-
-    int s = WriteImage(g.sub_image, g.sub_size, g.sub_size, name,
-                         IMAGEIO_NUM | IMAGEIO_GRAYSCALE | IMAGEIO_PLANAR, 1);
-   	if(s == 0 ) // error
-   		printf("Error writing %s\n", name);
-	return s;
+		int s = WriteImage(g.sub_image, g.sub_size, g.sub_size, name,
+		                     IMAGEIO_NUM | IMAGEIO_GRAYSCALE | IMAGEIO_PLANAR, 1);
+	   	if(s == 0 ) // error
+	   		printf("Error writing %s\n", name);
+		return s;
+	}
+	return 1;
 }
 
 void debug_print(){
@@ -228,13 +264,20 @@ void region_average(num *c1, num *c2){
     num total_sum1 = 0.0, total_sum2 = 0.0;
     long total_count1 = 0, total_count2 = 0;
     
-    MPI_Allreduce(&sum1, &total_sum1, 1, MPI_NUM, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&sum2, &total_sum2, 1, MPI_NUM, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&count1, &total_count1, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&count2, &total_count2, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
     
-    *c1 = total_sum1 / (num)total_count1;
-    *c2 = total_sum2 / (num)total_count2;
+    num total[4];
+    num temp[4] = {sum1, sum2, count1, count2};
+    
+    MPI_Allreduce(temp, total, 4, MPI_NUM, MPI_SUM, grid_comm);
+    *c1 = total[0] / total[2];
+    *c2 = total[1] / total[3];
+    
+//    MPI_Allreduce(&sum1, &total_sum1, 1, MPI_NUM, MPI_SUM, MPI_COMM_WORLD);
+//    MPI_Allreduce(&sum2, &total_sum2, 1, MPI_NUM, MPI_SUM, MPI_COMM_WORLD);
+//    MPI_Allreduce(&count1, &total_count1, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+//    MPI_Allreduce(&count2, &total_count2, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD); 
+//    *c1 = total_sum1 / (num)total_count1;
+//    *c2 = total_sum2 / (num)total_count2;
 }
 
 void update_boundary(){
@@ -267,7 +310,7 @@ void update_boundary(){
 void exchange_boundary(){
 
 #ifdef DEBUG
-	printf("%d - Exchange bound\n", g.rank);
+	//printf("%d - Exchange bound\n", g.rank);
 #endif
 
 	if(g.rank >= g.bl_dim_x*g.bl_dim_y){
@@ -291,13 +334,15 @@ void exchange_boundary(){
 //                 EXCHANGE_BOUND,
 //                 MPI_COMM_WORLD);
        
+       int source, dest;
+       MPI_Cart_shift(grid_comm, 0, -1, &source, &dest);
        	MPI_Request req;
         MPI_Isend(left,
                  g.block_size,
                  MPI_NUM,
-                 block_idx(g.bl_idx_x-1, g.bl_idx_y),
+                 dest,
                  EXCHANGE_BOUND,
-                 MPI_COMM_WORLD,
+                 grid_comm,
                  &req);
         
 
@@ -306,8 +351,9 @@ void exchange_boundary(){
         // Receive
         MPI_Status stat;
         num * right_recv = malloc(g.block_size*sizeof(num));
-        MPI_Recv(right_recv, g.block_size, MPI_NUM, block_idx(g.bl_idx_x-1, g.bl_idx_y),
-                 EXCHANGE_BOUND, MPI_COMM_WORLD, &stat);
+        MPI_Recv(right_recv, g.block_size, MPI_NUM, 
+        		dest,
+                 EXCHANGE_BOUND, grid_comm, &stat);
         for (int j = 0; j < g.block_size; j++) {
             set_phi_data(-1, j, right_recv[j]);
         }
@@ -329,13 +375,17 @@ void exchange_boundary(){
 //                 block_idx(g.bl_idx_x+1, g.bl_idx_y),
 //                 EXCHANGE_BOUND,
 //                 MPI_COMM_WORLD);
+
+       int source, dest;
+       int left = MPI_Cart_shift(grid_comm, 0, +1, &source, &dest);
+       
         MPI_Request req;         
         MPI_Isend(right,
                  g.block_size,
                  MPI_NUM,
-                 block_idx(g.bl_idx_x+1, g.bl_idx_y),
+                 dest,
                  EXCHANGE_BOUND,
-                 MPI_COMM_WORLD,
+                 grid_comm,
                  &req);
                                   
   //      printf("Right: rank %d to %d ; start revceive\n", g.rank, block_idx(g.bl_idx_x+1, g.bl_idx_y));
@@ -346,9 +396,9 @@ void exchange_boundary(){
         MPI_Recv(left_recv,
                  g.block_size,
                  MPI_NUM,
-                 block_idx(g.bl_idx_x+1, g.bl_idx_y),
+                 dest,
                  EXCHANGE_BOUND,
-                 MPI_COMM_WORLD,
+                 grid_comm,
                  &stat);
         for (int j = 0; j < g.block_size; j++) {
             set_phi_data(g.block_size, j, left_recv[j]);
@@ -362,17 +412,20 @@ void exchange_boundary(){
 //        MPI_Send(g.phi+local_array_idx(g.bl_idx_x, g.bl_idx_y+1), g.block_size, MPI_NUM,
 //                 block_idx(g.bl_idx_x, g.bl_idx_y+1), EXCHANGE_BOUND, MPI_COMM_WORLD);
         
+       int source, dest;
+       int left = MPI_Cart_shift(grid_comm, 1, +1, &source, &dest);
         MPI_Request req; 
         MPI_Isend(g.phi+local_array_idx(g.bl_idx_x, g.bl_idx_y+1), 
         			g.block_size, MPI_NUM,
-                 block_idx(g.bl_idx_x, g.bl_idx_y+1), 
-                 EXCHANGE_BOUND, MPI_COMM_WORLD,
+                 dest, 
+                 EXCHANGE_BOUND, grid_comm,
                  &req);
                
         num* top_recv = malloc(g.block_size*sizeof(num));
         MPI_Status stat;
         MPI_Recv(top_recv, g.block_size, MPI_NUM,
-                 block_idx(g.bl_idx_x, g.bl_idx_y+1), EXCHANGE_BOUND, MPI_COMM_WORLD, &stat);
+                 dest, 
+                 EXCHANGE_BOUND, grid_comm, &stat);
         for (int i = 0; i < g.block_size; i++) {
             set_phi_data(i, g.block_size, top_recv[i]);
         }
@@ -383,16 +436,20 @@ void exchange_boundary(){
 //        MPI_Send(g.phi+1, g.block_size, MPI_NUM,
 //                 block_idx(g.bl_idx_x, g.bl_idx_y-1), EXCHANGE_BOUND, MPI_COMM_WORLD);
         
+               int source, dest;
+       int left = MPI_Cart_shift(grid_comm, 1, -1, &source, &dest);
+       
         MPI_Request req; 
         MPI_Isend(g.phi+1, g.block_size, MPI_NUM,
-                 block_idx(g.bl_idx_x, g.bl_idx_y-1), EXCHANGE_BOUND, 
-                 MPI_COMM_WORLD, &req);
+                 dest, EXCHANGE_BOUND, 
+                 grid_comm, &req);
                
         
         num* bottom_recv = malloc(g.block_size*sizeof(num));
         MPI_Status stat;
         MPI_Recv(bottom_recv, g.block_size, MPI_NUM,
-                 block_idx(g.bl_idx_x, g.bl_idx_y-1), EXCHANGE_BOUND, MPI_COMM_WORLD, &stat);
+                 dest, 
+                 EXCHANGE_BOUND, grid_comm, &stat);
         for (int i = 0; i < g.block_size; i++) {
             set_phi_data(i, -1, bottom_recv[i]);
         }
@@ -405,7 +462,7 @@ int block_idx(int x, int y){
     return y*g.bl_dim_x + x;
 }
 
-void chan_vese_loop(){
+int chan_vese_loop(){
     
     // Temp var
     const long NumPixels = ((long)g.image_width) * ((long)g.image_height);
@@ -497,18 +554,19 @@ void chan_vese_loop(){
         
         // Error
         num total_e2 = 0.0;
-        MPI_Allreduce(&PhiDiffNorm, &total_e2, 1, MPI_NUM, MPI_SUM, MPI_COMM_WORLD);
-        total_e2 = sqrt(total_e2/NumEl);
+        MPI_Allreduce(&PhiDiffNorm, &total_e2, 1, 
+        				MPI_NUM, MPI_SUM, grid_comm);
+      //  total_e2 = sqrt(total_e2/NumEl);
 
 	//	printf("(%d) finish Allreduce loop %d \n", g.rank, count);
 
 #ifdef DEBUG        
-        LOG("Iter: %d - error: %f \n", count, total_e2);
+        LOG("Iter: %d - error: %f \n", count, total_e2); 
 #endif
         
         // Exchange boundary
         exchange_boundary();
-//        gather_phi_p(count);
+ //		exchange_boundary_windows();
 
 		MPI_Barrier(MPI_COMM_WORLD);
         
@@ -520,8 +578,14 @@ void chan_vese_loop(){
             break;
         }
     }
+    
+    return count;
 }
 
+void exchange_boundary_windows(){
+//	static inited
+
+}
 
 int WriteBinary(image Phi, const char *File)
 {
@@ -577,7 +641,7 @@ void gather_phi_p(int iter){
                  MPI_NUM,
                  g.main_proc,
                  GATHER_PHI,
-                 MPI_COMM_WORLD);
+                 grid_comm);
     }
     else { // receive
         num * phi_total = malloc(g.image_width*g.image_height*sizeof(num));
@@ -598,7 +662,7 @@ void gather_phi_p(int iter){
                              MPI_NUM,
                              idx,
                              GATHER_PHI,
-                             MPI_COMM_WORLD,
+                             grid_comm,
                              &stat);
                 }
                 
@@ -687,19 +751,22 @@ void gather_phi(){
         num * phi_total = malloc(g.image_width*g.image_height*sizeof(num));
         for (int blx = 0; blx < g.bl_dim_x; blx ++) {
             for (int bly = 0; bly < g.bl_dim_y; bly++) {
-                int idx = bly*g.bl_dim_x + blx;
-                num * receive_domain = malloc(g.block_size * g.block_size * sizeof(num));
+               int idx;
+               int coord[2] = {blx, bly};
+               MPI_Cart_rank(grid_comm, coord, &idx);
+                
+                num * receive_domain = malloc(g.block_size * g.block_size 
+                							* sizeof(num));
                 
                 
                 
                 if (idx == g.main_proc) {
-                    memcpy(receive_domain, main_domain, g.block_size * g.block_size * sizeof(num));
+                    memcpy(receive_domain, main_domain, 
+                    	g.block_size * g.block_size * sizeof(num));
                 }
                 else
                 {
                     MPI_Status stat;
-             //       printf("reive phi from %d / %d \n", idx, g.size);
-                    
                     MPI_Recv(receive_domain,
                              g.block_size * g.block_size,
                              MPI_NUM,

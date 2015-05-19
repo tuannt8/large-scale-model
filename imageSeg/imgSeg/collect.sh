@@ -16,7 +16,7 @@
 # we should be done within one hour
 #PBS -l walltime=0:05:00
 # the number of cores we need (use procs=N, or nodes=A:ppn=B, with N=A*B)
-#PBS -l procs=8
+#PBS -l procs=64
 #
 # change into work directory
 cd $PBS_O_WORKDIR
@@ -27,14 +27,12 @@ cd $PBS_O_WORKDIR
 module load studio
 module load mpi/studio
 
-PNAME=`echo $PROG | sed 's/ .*$//'` 
-echo $PNAME
-# STR=`basename $PNAME`
-# echo $STR
-# JID=`echo $PBS_JOBID | sed 's/\..*$//'`
-
-OUT="out_${D}_${PBS_JOBNAME}.${PBS_JOBID}.out"
+# OUT="out_${D}_${PBS_JOBNAME}.${PBS_JOBID}.out"
+nproc="64"
+SIZE="4000"
+ITERS="200"
+OUT="${nproc}_${SIZE}_${ITERS}_${PBS_JOBID}"
 
 # start collect with $PROG, using OpenMPI (aka CT8.1)
 #
-collect -M OPENMPI -o $OUT.er mpirun -np 6 -- ./image_seg -size 1000 -iters 400
+collect -M OPENMPI -o $OUT.er mpirun -np $nproc -- ./image_seg -size $SIZE -iters $ITERS
