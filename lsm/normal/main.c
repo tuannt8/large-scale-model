@@ -14,7 +14,6 @@
 #include <stdbool.h>
 
 global_info g;
-MPI_Comm grid_comm;
 
 void init_data(){
     g.main_proc = 0;
@@ -62,8 +61,8 @@ int main(int argc, char* argv[]){
     print_info();
     
     if(g.img_size != 0){
-    	strcpy(g.file_path, "LOG/dummy.bmp");
-//    	generate_image();
+        	strcpy(g.file_path, "LOG/dummy.bmp");
+    	generate_image();
     }
     
     double other_t = 0.0, loop_t = 0.0;
@@ -72,27 +71,23 @@ int main(int argc, char* argv[]){
     // 2. Read image
     //    Compute optimal block size and number of procs
     //    Load partial image to each proc
-//    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
     double t = MPI_Wtime();
     
     if(read_data() != 0)
         goto catch;
-        
-    if(grid_comm == MPI_COMM_NULL){
-    	goto catch;
-    }
     
-    MPI_Barrier(grid_comm);    
+    MPI_Barrier(MPI_COMM_WORLD);    
    	t = MPI_Wtime() - t;
    	
    	LOG("Read image time: %f sec \n", t);
    	other_t += t;
    	
    	// Log local image
-   	// log_local_image();
+  // 	log_local_image();
  
     // 3. Init Phi
-    MPI_Barrier(grid_comm);
+    MPI_Barrier(MPI_COMM_WORLD);
     t = MPI_Wtime();
     
     if(init_phi() != 0)
@@ -100,7 +95,7 @@ int main(int argc, char* argv[]){
         
   //  log_local_phi();
     
-    MPI_Barrier(grid_comm);    
+    MPI_Barrier(MPI_COMM_WORLD);    
     t = MPI_Wtime() - t;
    	LOG("Init level set time: %f sec \n", t);
    	other_t += t;
@@ -110,29 +105,26 @@ int main(int argc, char* argv[]){
     LOG("Start Chan-Vese\n");
  
    
-    MPI_Barrier(grid_comm);
-	t = MPI_Wtime();
+    MPI_Barrier(MPI_COMM_WORLD);
+    t = MPI_Wtime();
+    
     int count;
-    if(grid_comm != MPI_COMM_NULL)
-    {
-		count = chan_vese_loop(&loop_t);
-		
-		MPI_Barrier(grid_comm);
-		t = MPI_Wtime() - t;
-		if(g.rank == 0){
-		//	printf("- %f -", t);
-		}
-    }
+    double time;
+    chan_vese_loop(&count, &loop_t);
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+
+        
     // Gather level set function and log  
 
-//    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
     t = MPI_Wtime();
     LOG("Start gathering phi\n");  
         
-//    gather_phi();
+    gather_phi();
     LOG_LINE;
     
-//    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
     t = MPI_Wtime() - t;
    	LOG("gathering level set time: %f sec \n", t);
    	other_t += t;
@@ -143,15 +135,8 @@ int main(int argc, char* argv[]){
    					* g.bl_dim_x*g.bl_dim_y 
    					* g.sub_size * g.sub_size
    					* sizeof(num);
-   		printf("%f %f %f %d %d # Mem other_time segment_time num_thread iters ", 
+   		printf("%f %f %f %d %d # Mem other_time segment_time num thread - no topo\n", 
    				mem, other_t, loop_t, g.bl_dim_x*g.bl_dim_y , count);
-   				
-   		#ifdef USE_WINDOWS
-   		printf(" - topo + windows ");
-   		#else
-   		printf(" - topo");
-   		#endif
-   		printf("\n");
    	}
    	
   
@@ -163,6 +148,7 @@ int main(int argc, char* argv[]){
     return 0;
     
 catch:
+	LOG("Some errors occur \n");
     MPI_Finalize();
     release_memory();
     

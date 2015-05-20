@@ -29,8 +29,6 @@
 
 #define GAP_SIZE 20 // pixel
 
- #define USE_WINDOWS
-
 typedef struct{
     int x;
     int y;
@@ -88,7 +86,6 @@ typedef struct {
 }global_info;
 
 extern global_info g;
-extern MPI_Comm grid_comm;
 
 /////////////////////////////////////////////////
 // Parser argument
@@ -98,7 +95,6 @@ int parse_arguments(int argc, char* argv[]);
 // Read image data
 void generate_image();
 int read_data();
-void create_cartersian_comm();
 
 int log_local_phi();
 int log_local_image();
@@ -110,17 +106,10 @@ void gather_phi();
 void gather_phi_p(int iter);
 
 /////////////////////////////////////////////////
-int chan_vese_loop(double *time);
-
-
+void chan_vese_loop(int * c, double * time);
 void region_average(num *c1, num *c2);
 void update_boundary();
 void exchange_boundary();
-void exchange_boundary_windows();
-void init_window_buffer();
-void delete_window_buffer();
-void update_windows_buffer();
-void copy_buffer_to_boundary();
 
 /////////////////////////////////////////////////
 //inline int proc_index(int x, int y);
@@ -133,11 +122,6 @@ void print_g();
 int max_(int a, int b);
 void print_mat(num* data, int width, int height);
 int get_global_pixel_index(vec2 const local, vec2 *global);
-//extern inline num get_sub_image_data(int x, int y);
-//extern inline void set_sub_image_data(int x, int y, int inten);
-//extern inline num get_phi_data(int x, int y);
-//extern inline void set_phi_data(int x, int y, int inten);
-
 #define get_sub_image_data(x, y) \
 			g.sub_image[(y+1)*g.sub_size + x + 1]
 
@@ -154,10 +138,6 @@ int get_global_pixel_index(vec2 const local, vec2 *global);
 
 #define local_array_idx( x,  y)\
     ( (y+1)*g.sub_size + x + 1)
-
-// local (-1 -> block) -> index
-//extern inline int local_array_idx(int x, int y); 
-// vec2 global_idx_convert(vec2 local);
 
 int block_idx(int x, int y);
 

@@ -13,10 +13,10 @@ all:$(TARGET)
 
 $(TARGET): $(OBJECT)
 	$(CXX) $(CXX_FLAGS) $(OBJECT) -o $(TARGET)
-	
+
 $(OBJECT): $(SRC)
 	$(CXX) $(CXX_FLAGS) -c $(SRC)
-	
+
 $(SRC): $(HEADER)
 
 .PHONY: clean

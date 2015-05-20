@@ -7,24 +7,8 @@
 //
 
 #include "util.h"
-
-
-
-#ifdef USE_WINDOWS
-num * buffer; 
-num * receive_buffer;
-MPI_Win win;
-// Buffer for other process to access
-// Left - down - right - top
-#define LEFT 0*g.block_size
-#define BOTTOM g.block_size
-#define RIGHT 2*g.block_size
-#define TOP 3*g.block_size
-
-#else
 num *left, *right, *top, *bottom;
 num *right_recv, *left_recv;
-#endif
 
 /////////////////////////////////////////////////
 // Read image data
@@ -94,14 +78,9 @@ int read_data(){
     MPI_Bcast(&g.bl_dim_y, 1, MPI_INT, g.main_proc, MPI_COMM_WORLD);
     MPI_Bcast(&g.block_size, 1, MPI_INT, g.main_proc, MPI_COMM_WORLD);
 
-//    g.bl_idx_x = g.rank % g.bl_dim_x;
-//	g.bl_idx_y = g.rank / g.bl_dim_x;
+    g.bl_idx_x = g.rank % g.bl_dim_x;
+	g.bl_idx_y = g.rank / g.bl_dim_x;
 	g.sub_size = g.block_size + 2;
-	
-	//////////
-	// Create Cartersian communication
-	//////////
-	create_cartersian_comm();
     
     int length_y, length_x;
     if (g.bl_idx_x < g.bl_dim_x - 1) {
@@ -157,70 +136,39 @@ Catch:
     return 1;
 };
 
-void create_cartersian_comm(){
-    int dims [ ] = { g.bl_dim_x , g.bl_dim_y } , 
-    				periodic [ ] = { 0 , 0 } , 
-    				reorder = 1 ;
-    int error ;
-    // Create Cart communication
-    error = MPI_Cart_create ( MPI_COMM_WORLD
-                             , 2  // Cartersian grid dimension
-                             , dims // Number of process in each dimension
-                             , periodic // true if first item connect to last item
-                             , reorder // Ranking may be reorder, give the system a chance to optimize
-                             , &grid_comm ) ;
-                             
-   // Set block index
-   if(grid_comm != MPI_COMM_NULL){
-   		int coordinates[2]; int my_grid_rank;
-        int err = MPI_Comm_rank(grid_comm, &my_grid_rank);
-        MPI_Cart_coords( grid_comm, my_grid_rank, 2, coordinates);
-        
-        g.bl_idx_x = coordinates[0];
-        g.bl_idx_y = coordinates[1];
-        
-        g.rank = my_grid_rank;
-   }
-}
-
 int log_local_phi(){
-	if(grid_comm != MPI_COMM_NULL){
-		// Write
-		image img_;
-		img_.Data = g.phi;
-		img_.Height = g.sub_size;
-		img_.Width = g.sub_size;
-		img_.NumChannels = 1;
-		char name[MAX_LEN_S_T];
-		sprintf(name, "LOG/phi_%d.bmp", g.rank);
-		
-		printf("Write to %s \n", name);
-		
+	// Write
+    image img_;
+    img_.Data = g.phi;
+    img_.Height = g.sub_size;
+    img_.Width = g.sub_size;
+    img_.NumChannels = 1;
+    char name[MAX_LEN_S_T];
+    sprintf(name, "LOG/phi_%d.bmp", g.rank);
+    
+    printf("Write to %s \n", name);
+    
 
-		int s = WriteImage(img_.Data, img_.Width, img_.Height, name,
-		                     IMAGEIO_NUM | IMAGEIO_GRAYSCALE | IMAGEIO_PLANAR, 1);
-	   	if(s == 0 )
-	   		printf("Error writing %s\n", name);
-		return s;
-	}
-	return 1;
+    int s = WriteImage(img_.Data, img_.Width, img_.Height, name,
+                         IMAGEIO_NUM | IMAGEIO_GRAYSCALE | IMAGEIO_PLANAR, 1);
+   	if(s == 0 )
+   		printf("Error writing %s\n", name);
+	return s;
 }
 
 int log_local_image(){
-	if(grid_comm != MPI_COMM_NULL){
-		char name[MAX_LEN_S_T];
-		sprintf(name, "LOG/img_%d_%d_%d.bmp", g.rank, g.bl_idx_x, g.bl_idx_y);
-		
-		printf("Write to %s \n", name);
-		
 
-		int s = WriteImage(g.sub_image, g.sub_size, g.sub_size, name,
-		                     IMAGEIO_NUM | IMAGEIO_GRAYSCALE | IMAGEIO_PLANAR, 1);
-	   	if(s == 0 ) // error
-	   		printf("Error writing %s\n", name);
-		return s;
-	}
-	return 1;
+    char name[MAX_LEN_S_T];
+    sprintf(name, "LOG/img_%d.bmp", g.rank);
+    
+    printf("Write to %s \n", name);
+    
+
+    int s = WriteImage(g.sub_image, g.sub_size, g.sub_size, name,
+                         IMAGEIO_NUM | IMAGEIO_GRAYSCALE | IMAGEIO_PLANAR, 1);
+   	if(s == 0 ) // error
+   		printf("Error writing %s\n", name);
+	return s;
 }
 
 void debug_print(){
@@ -281,20 +229,13 @@ void region_average(num *c1, num *c2){
     num total_sum1 = 0.0, total_sum2 = 0.0;
     long total_count1 = 0, total_count2 = 0;
     
+    MPI_Allreduce(&sum1, &total_sum1, 1, MPI_NUM, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&sum2, &total_sum2, 1, MPI_NUM, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&count1, &total_count1, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&count2, &total_count2, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
     
-    num total[4];
-    num temp[4] = {sum1, sum2, count1, count2};
-    
-    MPI_Allreduce(temp, total, 4, MPI_NUM, MPI_SUM, grid_comm);
-    *c1 = total[0] / total[2];
-    *c2 = total[1] / total[3];
-    
-//    MPI_Allreduce(&sum1, &total_sum1, 1, MPI_NUM, MPI_SUM, MPI_COMM_WORLD);
-//    MPI_Allreduce(&sum2, &total_sum2, 1, MPI_NUM, MPI_SUM, MPI_COMM_WORLD);
-//    MPI_Allreduce(&count1, &total_count1, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-//    MPI_Allreduce(&count2, &total_count2, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD); 
-//    *c1 = total_sum1 / (num)total_count1;
-//    *c2 = total_sum2 / (num)total_count2;
+    *c1 = total_sum1 / (num)total_count1;
+    *c2 = total_sum2 / (num)total_count2;
 }
 
 void update_boundary(){
@@ -322,13 +263,12 @@ void update_boundary(){
         }
     }
 }
-#ifndef USE_WINDOWS
 
 #define EXCHANGE_BOUND 10001
 void exchange_boundary(){
 
 #ifdef DEBUG
-	//printf("%d - Exchange bound\n", g.rank);
+	printf("%d - Exchange bound\n", g.rank);
 #endif
 
 	if(g.rank >= g.bl_dim_x*g.bl_dim_y){
@@ -337,7 +277,7 @@ void exchange_boundary(){
 	
     if (g.bl_idx_x > 0) { // LEFT
         // exchange left boundary with g.bl_idx_x - 1
-        // static num * left = malloc(g.block_size*sizeof(num));
+       // num * left = malloc(g.block_size*sizeof(num));
         for (int j = 0; j < g.block_size; j++) {
             left[j] = get_phi_data(-1, j);
         }
@@ -352,15 +292,13 @@ void exchange_boundary(){
 //                 EXCHANGE_BOUND,
 //                 MPI_COMM_WORLD);
        
-       int source, dest;
-       MPI_Cart_shift(grid_comm, 0, -1, &source, &dest);
        	MPI_Request req;
         MPI_Isend(left,
                  g.block_size,
                  MPI_NUM,
-                 dest,
+                 block_idx(g.bl_idx_x-1, g.bl_idx_y),
                  EXCHANGE_BOUND,
-                 grid_comm,
+                 MPI_COMM_WORLD,
                  &req);
         
 
@@ -368,18 +306,19 @@ void exchange_boundary(){
         
         // Receive
         MPI_Status stat;
-        num * right_recv = malloc(g.block_size*sizeof(num));
-        MPI_Recv(right_recv, g.block_size, MPI_NUM, 
-        		dest,
-                 EXCHANGE_BOUND, grid_comm, &stat);
+    //    num * right_recv = malloc(g.block_size*sizeof(num));
+        MPI_Recv(right_recv, g.block_size, MPI_NUM, block_idx(g.bl_idx_x-1, g.bl_idx_y),
+                 EXCHANGE_BOUND, MPI_COMM_WORLD, &stat);
         for (int j = 0; j < g.block_size; j++) {
             set_phi_data(-1, j, right_recv[j]);
         }
         
+    //    free(left);
+     //   free(right_recv);
     }
     if (g.bl_idx_x < (g.bl_dim_x-1)) { // RIGHT
         // Exchange right boundary with g.bl_idx_x  + 1
-       //  static num * right = malloc(g.block_size*sizeof(num));
+    //    num * right = malloc(g.block_size*sizeof(num));
         for (int j = 0; j < g.block_size; j++) {
             right[j] = get_phi_data(g.block_size, j);
         }
@@ -391,34 +330,32 @@ void exchange_boundary(){
 //                 block_idx(g.bl_idx_x+1, g.bl_idx_y),
 //                 EXCHANGE_BOUND,
 //                 MPI_COMM_WORLD);
-
-       int source, dest;
-       int left = MPI_Cart_shift(grid_comm, 0, +1, &source, &dest);
-       
         MPI_Request req;         
         MPI_Isend(right,
                  g.block_size,
                  MPI_NUM,
-                 dest,
+                 block_idx(g.bl_idx_x+1, g.bl_idx_y),
                  EXCHANGE_BOUND,
-                 grid_comm,
+                 MPI_COMM_WORLD,
                  &req);
                                   
   //      printf("Right: rank %d to %d ; start revceive\n", g.rank, block_idx(g.bl_idx_x+1, g.bl_idx_y));
  
         // Receive
         MPI_Status stat;
-        num *left_recv = malloc(g.block_size*sizeof(num));
+  //      num *left_recv = malloc(g.block_size*sizeof(num));
         MPI_Recv(left_recv,
                  g.block_size,
                  MPI_NUM,
-                 dest,
+                 block_idx(g.bl_idx_x+1, g.bl_idx_y),
                  EXCHANGE_BOUND,
-                 grid_comm,
+                 MPI_COMM_WORLD,
                  &stat);
         for (int j = 0; j < g.block_size; j++) {
             set_phi_data(g.block_size, j, left_recv[j]);
         }
+   //     free(right);
+   //     free(left_recv);
     }
     if (g.bl_idx_y < (g.bl_dim_y-1)) { // BOTTOM
         // Exchange bottom boundary with g.bl_idx_y+1
@@ -426,57 +363,57 @@ void exchange_boundary(){
 //        MPI_Send(g.phi+local_array_idx(g.bl_idx_x, g.bl_idx_y+1), g.block_size, MPI_NUM,
 //                 block_idx(g.bl_idx_x, g.bl_idx_y+1), EXCHANGE_BOUND, MPI_COMM_WORLD);
         
-       int source, dest;
-       int left = MPI_Cart_shift(grid_comm, 1, +1, &source, &dest);
         MPI_Request req; 
         MPI_Isend(g.phi+local_array_idx(g.bl_idx_x, g.bl_idx_y+1), 
         			g.block_size, MPI_NUM,
-                 dest, 
-                 EXCHANGE_BOUND, grid_comm,
+                 block_idx(g.bl_idx_x, g.bl_idx_y+1), 
+                 EXCHANGE_BOUND, MPI_COMM_WORLD,
                  &req);
                
-       // static num* top_recv = malloc(g.block_size*sizeof(num));
+   //     num* top_recv = malloc(g.block_size*sizeof(num));
         MPI_Status stat;
         MPI_Recv(top, g.block_size, MPI_NUM,
-                 dest, 
-                 EXCHANGE_BOUND, grid_comm, &stat);
+                 block_idx(g.bl_idx_x, g.bl_idx_y+1), EXCHANGE_BOUND, MPI_COMM_WORLD, &stat);
         for (int i = 0; i < g.block_size; i++) {
             set_phi_data(i, g.block_size, top[i]);
         }
+     //   free(top_recv);
     } 
     if (g.bl_idx_y > 0) { // TOP
         // Exchagne top boundary with g.bl_idx_y-1
 //        MPI_Send(g.phi+1, g.block_size, MPI_NUM,
 //                 block_idx(g.bl_idx_x, g.bl_idx_y-1), EXCHANGE_BOUND, MPI_COMM_WORLD);
         
-               int source, dest;
-       int left = MPI_Cart_shift(grid_comm, 1, -1, &source, &dest);
-       
         MPI_Request req; 
         MPI_Isend(g.phi+1, g.block_size, MPI_NUM,
-                 dest, EXCHANGE_BOUND, 
-                 grid_comm, &req);
+                 block_idx(g.bl_idx_x, g.bl_idx_y-1), EXCHANGE_BOUND, 
+                 MPI_COMM_WORLD, &req);
                
         
-      //  static num* bottom_recv = malloc(g.block_size*sizeof(num));
+    //    num* bottom_recv = malloc(g.block_size*sizeof(num));
         MPI_Status stat;
         MPI_Recv(bottom, g.block_size, MPI_NUM,
-                 dest, 
-                 EXCHANGE_BOUND, grid_comm, &stat);
+                 block_idx(g.bl_idx_x, g.bl_idx_y-1), EXCHANGE_BOUND, MPI_COMM_WORLD, &stat);
         for (int i = 0; i < g.block_size; i++) {
             set_phi_data(i, -1, bottom[i]);
         }
+     //   free(bottom_recv);
     }
 
 }
-#endif
 
 int block_idx(int x, int y){
     return y*g.bl_dim_x + x;
 }
 
-int chan_vese_loop(double *time){
-    
+void chan_vese_loop(int * c, double * time){
+    left = malloc(g.block_size * sizeof(num));
+	right = malloc(g.block_size * sizeof(num));
+	top = malloc(g.block_size * sizeof(num));
+	bottom = malloc(g.block_size * sizeof(num));
+	right_recv = malloc(g.block_size * sizeof(num));
+	left_recv = malloc(g.block_size * sizeof(num));
+	
     // Temp var
     const long NumPixels = ((long)g.image_width) * ((long)g.image_height);
     const long NumEl = NumPixels;
@@ -500,23 +437,14 @@ int chan_vese_loop(double *time){
     PhiDiffNorm = (PhiTol > 0) ? PhiTol*1000 : 1000;
     
     int count = 0;
-    num compute_time = 0.0;
-    num commute_time = 0.0;
-    
-
-    init_window_buffer();
-
-    double t;
-    double total_t = 0.0;
+    double t, total_t = 0.0;
     while (1) {
         // Update level set function
-
-		t = MPI_Wtime();
+        
+        t = MPI_Wtime();
         
         region_average(c1, c2);
-#ifndef USE_WINDOWS        
         update_boundary();
-#endif
         
         PhiPtr = g.phi + local_array_idx(0, 0);
         fPtr = g.sub_image + local_array_idx(0, 0);
@@ -571,276 +499,55 @@ int chan_vese_loop(double *time){
             }
         }
         
-         LOG("Loop 1\n");
-        
-#ifdef USE_WINDOWS    
- LOG("Loop 2\n");    
-        update_windows_buffer();
-#endif
-        
-        MPI_Barrier(grid_comm);
+        MPI_Barrier(MPI_COMM_WORLD);
         
       //  printf("(%d) finish main loop %d\n", g.rank, count);
         
         // Error
-       
         num total_e2 = 0.0;
-        MPI_Allreduce(&PhiDiffNorm, &total_e2, 1, 
-        				MPI_NUM, MPI_SUM, grid_comm);
-      //  total_e2 = sqrt(total_e2/NumEl);
+        MPI_Allreduce(&PhiDiffNorm, &total_e2, 1, MPI_NUM, MPI_SUM, MPI_COMM_WORLD);
+        total_e2 = sqrt(total_e2/NumEl);
 
 	//	printf("(%d) finish Allreduce loop %d \n", g.rank, count);
 
 #ifdef DEBUG        
-        LOG("Iter: %d - error: %f \n", count, total_e2); 
+        LOG("Iter: %d - error: %f \n", count, total_e2);
 #endif
         
         // Exchange boundary
- //       
-#ifdef USE_WINDOWS
- 		exchange_boundary_windows();
- 		copy_buffer_to_boundary();
-#else
-        LOG("Loop 1\n");
-		exchange_boundary();
-		// MPI_Barrier(grid_comm);
-#endif
+        exchange_boundary();
+//        gather_phi_p(count);
 
-		count++;
-
-		MPI_Barrier(grid_comm);
-		t = MPI_Wtime() - t;
-		total_t += t;
-		if(total_t > 300){
-			break;
-		}
+		MPI_Barrier(MPI_COMM_WORLD);
         
+        count++;
         
+        t = MPI_Wtime() - t;
+        total_t += t;
+        if(total_t > 300){
+        	break;
+        }
         
-        if (count >= g.opt.max_iter
-      //      || total_e2 <= PhiTol
+        if (count > g.opt.max_iter
+     //       || total_e2 <= PhiTol
             ) {
             break;
         }
     }
-  
-    delete_window_buffer();
     
-    if(g.rank == 0){
- //   	printf("- %f - ", total_t);
-    }
-   
     *time = total_t;
-    return count;
-}
-
-#ifdef USE_WINDOWS
-void copy_buffer_to_boundary(){
-	
-	// Left
-	if(g.bl_idx_x > 0)
-	{
-		num * lptr = &receive_buffer[LEFT];
-	    for(int i = 0; i < g.block_size; i++)
-	    {
-	    	set_phi_data(-1, i, *lptr++);
-	    }
-	}
-	else
-	{
-		for(int i = 0; i < g.block_size; i++)
-	    {
-	    	set_phi_data(-1, i, get_phi_data(0, i));
-	    }
-	}
-	
-	// Right
-	if(g.bl_idx_x < (g.bl_dim_x-1))
-	{
-     	num * rptr = &receive_buffer[RIGHT];
-     	for(int i = 0; i < g.block_size; i++)
-	    {
-	    	set_phi_data(g.block_size, i, *rptr++);
-	    }
-	}
-	else
-	{
-		for(int i = 0; i < g.block_size; i++)
-	    {
-	    	set_phi_data(g.block_size, i, get_phi_data(g.block_size-1, i));
-	    }
-	}
-	
-	// Bottom
-	if (g.bl_idx_y < (g.bl_dim_y-1))
-	{
-      	num * bptr = &receive_buffer[BOTTOM];
-     	for(int i = 0; i < g.block_size; i++)
-	    {
-	    	set_phi_data(i, g.block_size, *bptr++);
-	    }
-	}
-	else
-	{
-		for(int i = 0; i < g.block_size; i++)
-	    {
-	    	set_phi_data(i, g.block_size, get_phi_data(i, g.block_size-1));
-	    }
-	}
-	
-	// top
-	if (g.bl_idx_y > 0)
-	{
- 		num * tptr = &receive_buffer[TOP];
-     	for(int i = 0; i < g.block_size; i++)
-	    {
-	    	set_phi_data(i, -1, *tptr++);
-	    }
-	}
-	else
-	{
-		for(int i = 0; i < g.block_size; i++)
-	    {
-	    	set_phi_data(i, -1, get_phi_data(i, 0));
-	    }
-	}
-}
-#endif
-
-void init_window_buffer(){
-#ifdef USE_WINDOWS
-	buffer = malloc(4 * g.block_size * sizeof(num));
-	receive_buffer = malloc(4 * g.block_size * sizeof(num));
-	// Create windows
-	MPI_Win_create(buffer
-					, 4 * g.block_size // Window size
-					, sizeof(num) // element size
-					, MPI_INFO_NULL
-					, grid_comm
-					, &win);
-#else
-	left = malloc(g.block_size * sizeof(num));
-	right = malloc(g.block_size * sizeof(num));
-	top = malloc(g.block_size * sizeof(num));
-	bottom = malloc(g.block_size * sizeof(num));
-	right_recv = malloc(g.block_size * sizeof(num));
-	left_recv = malloc(g.block_size * sizeof(num));
-#endif
-}
-
-void delete_window_buffer(){
-#ifdef USE_WINDOWS
-	free(buffer);
-	free(receive_buffer);
-	MPI_Win_free(&win);
-#else
-	free(left);
+    *c = count;
+    
+    
+    free(left);
 	free(right);
 	free(bottom);
 	free(top);
 	free(right_recv);
 	free(left_recv);
-#endif
 }
 
-#ifdef USE_WINDOWS
-void update_windows_buffer(){
-	// Left
-	num * lptr = &buffer[LEFT];
-	for(int i = 0; i < g.block_size; i++){
-		*(lptr++) = get_phi_data(0, i);
-	}
-	
-	// Right
-	num * rptr = &buffer[RIGHT];
-	for(int i = 0; i < g.block_size; i++){
-		*(rptr++) = get_phi_data(g.block_size-1, i);
-	}
-	
-	// Top
-	num * tptr = &buffer[TOP];
-	for(int i = 0; i < g.block_size; i++){
-		*(tptr++) = get_phi_data(i, 0);
-	}
-	
-	// Bottom
-	num * bptr = &buffer[BOTTOM];
-	for(int i = 0; i < g.block_size; i++){
-		*(bptr++) = get_phi_data(i, g.block_size-1);
-	}
-}
 
-void exchange_boundary_windows(){
-	MPI_Win_fence(0, win);
-	
-	// Left
-	// exchange left boundary with right of g.bl_idx_x - 1
-	if(g.bl_idx_x > 0)
-	{
-	    int source, dest;
-        MPI_Cart_shift(grid_comm, 0, -1, &source, &dest);
-		MPI_Get(&receive_buffer[LEFT]	// copy to left
-				, g.block_size			// size
-				, MPI_NUM				// type
-				, dest					// rank of target
-				, RIGHT					// displace to right
-				, g.block_size			// size
-				, MPI_NUM				// type
-				, win
-				);
-	}
-	// Right
-	// Copy left of x+1 to right
-	if(g.bl_idx_x < (g.bl_dim_x-1))
-	{
-	   	int source, dest;
-       	int left = MPI_Cart_shift(grid_comm, 0, +1, &source, &dest);
- 		MPI_Get(&receive_buffer[RIGHT]	// copy to left
-				, g.block_size			// size
-				, MPI_NUM				// type
-				, dest					// rank of target
-				, LEFT					// displace to right
-				, g.block_size			// size
-				, MPI_NUM				// type
-				, win
-				);      
-	}
-	
-	// Bottom
-	if (g.bl_idx_y < (g.bl_dim_y-1))
-	{
-		int source, dest;
-      	int left = MPI_Cart_shift(grid_comm, 1, +1, &source, &dest);
-  		MPI_Get(&receive_buffer[BOTTOM]	// copy to bottom
-				, g.block_size			// size
-				, MPI_NUM				// type
-				, dest					// rank of target
-				, TOP					// displace to top
-				, g.block_size			// size
-				, MPI_NUM				// type
-				, win
-				);      	
-	}
-	
-	// top
-	if (g.bl_idx_y > 0)
-	{
-		int source, dest;
-       	int left = MPI_Cart_shift(grid_comm, 1, -1, &source, &dest);
-  		MPI_Get(&receive_buffer[TOP]	// copy to bottom
-				, g.block_size			// size
-				, MPI_NUM				// type
-				, dest					// rank of target
-				, BOTTOM					// displace to top
-				, g.block_size			// size
-				, MPI_NUM				// type
-				, win
-				);  
-	}
-	
-	MPI_Win_fence(0, win);
-}
-#endif
 int WriteBinary(image Phi, const char *File)
 {
     unsigned char *Temp = NULL;
@@ -895,7 +602,7 @@ void gather_phi_p(int iter){
                  MPI_NUM,
                  g.main_proc,
                  GATHER_PHI,
-                 grid_comm);
+                 MPI_COMM_WORLD);
     }
     else { // receive
         num * phi_total = malloc(g.image_width*g.image_height*sizeof(num));
@@ -916,7 +623,7 @@ void gather_phi_p(int iter){
                              MPI_NUM,
                              idx,
                              GATHER_PHI,
-                             grid_comm,
+                             MPI_COMM_WORLD,
                              &stat);
                 }
                 
@@ -977,28 +684,47 @@ void gather_phi(){
                g.active_size_x*sizeof(num));		// Size
     }
     
+/*    if (g.size == 1) // Only one proc
+    {
+    	// Write
+        image phi_;
+        phi_.Data = main_domain;
+        phi_.Height = g.image_height;
+        phi_.Width = g.image_width;
+        phi_.NumChannels = 1;
+        char name[MAX_LEN_S_T];
+        sprintf(name, "LOG/phi.bmp");
+        
+        WriteBinary(phi_, name);
+        LOG("Level set function written to LOG/phi.bmp\n");
+        
+        free(main_domain);
+    	return;
+    }*/
+    
+ //   printf("gather phi in %d\n", g.rank);
+    
+//	printf("Block dimension: [%d %d]\n", g.bl_dim_x, g.bl_dim_y);
+    
     if(g.rank == g.main_proc) 
     { // receive
     
         num * phi_total = malloc(g.image_width*g.image_height*sizeof(num));
         for (int blx = 0; blx < g.bl_dim_x; blx ++) {
             for (int bly = 0; bly < g.bl_dim_y; bly++) {
-               int idx;
-               int coord[2] = {blx, bly};
-               MPI_Cart_rank(grid_comm, coord, &idx);
-                
-                num * receive_domain = malloc(g.block_size * g.block_size 
-                							* sizeof(num));
+                int idx = bly*g.bl_dim_x + blx;
+                num * receive_domain = malloc(g.block_size * g.block_size * sizeof(num));
                 
                 
                 
                 if (idx == g.main_proc) {
-                    memcpy(receive_domain, main_domain, 
-                    	g.block_size * g.block_size * sizeof(num));
+                    memcpy(receive_domain, main_domain, g.block_size * g.block_size * sizeof(num));
                 }
                 else
                 {
                     MPI_Status stat;
+             //       printf("reive phi from %d / %d \n", idx, g.size);
+                    
                     MPI_Recv(receive_domain,
                              g.block_size * g.block_size,
                              MPI_NUM,
@@ -1144,7 +870,7 @@ int parse_arguments(int argc, char* argv[]){
 }
 
 void generate_image(){
-	
+	strcpy(g.file_path, "LOG/dummy.bmp");
 	if(g.rank == g.main_proc){
 		num * data = malloc(g.img_size * g.img_size * sizeof(num));
 		num center = g.img_size/2;

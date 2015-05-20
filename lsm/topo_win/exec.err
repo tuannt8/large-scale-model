@@ -1,0 +1,82 @@
+Loaded module: mpi/gcc
+
+real	5m4.513s
+user	5m4.458s
+sys	0m0.079s
+mpirun: killing job...
+
+mpirun: abort is already in progress...hit ctrl-c again to forcibly terminate
+
+Loaded module: mpi/gcc
+
+real	5m4.452s
+user	5m4.588s
+sys	0m0.082s
+
+real	5m4.613s
+user	5m4.721s
+sys	0m0.094s
+
+real	5m5.610s
+user	5m5.147s
+sys	0m0.135s
+
+real	3m57.753s
+user	7m52.845s
+sys	0m0.161s
+
+real	3m57.413s
+user	7m52.463s
+sys	0m0.136s
+
+real	4m4.498s
+user	8m6.684s
+sys	0m0.211s
+
+real	1m3.825s
+user	2m5.075s
+sys	0m0.150s
+
+real	1m3.695s
+user	2m4.918s
+sys	0m0.145s
+mpirun: killing job...
+
+Loaded module: mpi/gcc
+
+real	5m3.054s
+user	15m1.269s
+sys	0m0.519s
+
+real	5m2.212s
+user	15m0.598s
+sys	0m0.475s
+
+real	5m2.970s
+user	15m2.958s
+sys	0m0.435s
+
+real	5m4.114s
+user	15m3.011s
+sys	0m0.627s
+
+real	5m2.801s
+user	15m0.326s
+sys	0m0.476s
+
+real	5m3.190s
+user	15m3.593s
+sys	0m0.594s
+
+real	5m3.198s
+user	15m1.924s
+sys	0m0.617s
+
+real	5m2.655s
+user	15m1.662s
+sys	0m0.483s
+mpirun: killing job...
+
+mpirun: abort is already in progress...hit ctrl-c again to forcibly terminate
+
+Loaded module: mpi/gcc

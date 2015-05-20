@@ -63,7 +63,7 @@ int main(int argc, char* argv[]){
     
     if(g.img_size != 0){
     	strcpy(g.file_path, "LOG/dummy.bmp");
-//    	generate_image();
+    	generate_image();
     }
     
     double other_t = 0.0, loop_t = 0.0;
